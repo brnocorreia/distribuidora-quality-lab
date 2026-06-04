@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm';
 
 export class CreateInventoryMovementsTable1700000000003 implements MigrationInterface {
-  name = '003-create-inventory-movements-table';
-
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
