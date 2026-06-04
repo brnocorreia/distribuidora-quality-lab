@@ -7,6 +7,7 @@ import { ConfirmOrderUseCase } from '@modules/order/application/use-cases/confir
 import { TransitionOrderStatusUseCase } from '@modules/order/application/use-cases/transition-order-status.use-case';
 import { CancelOrderUseCase } from '@modules/order/application/use-cases/cancel-order.use-case';
 import { ORDER_REPOSITORY } from '@modules/order/domain/repositories/order.repository';
+import { TransitionStatusDto } from '@modules/order/interface/dtos/transition-status.dto';
 
 describe('Order Integration', () => {
   let controller: OrderController;
@@ -80,7 +81,7 @@ describe('Order Integration', () => {
 
       mockCreateOrderUseCase.execute.mockResolvedValue(createdOrder);
 
-      const result = await controller.create(orderData as any);
+      const result = await controller.create(orderData);
 
       expect(result).toBeDefined();
       expect(result.status).toBe('rascunho');
@@ -115,9 +116,7 @@ describe('Order Integration', () => {
 
       mockOrderRepository.findById.mockResolvedValue(mockOrder);
 
-      const result = await controller.findOne(
-        '550e8400-e29b-41d4-a716-446655440010',
-      );
+      const result = await controller.findOne('550e8400-e29b-41d4-a716-446655440010');
 
       expect(result.id).toBe('550e8400-e29b-41d4-a716-446655440010');
       expect(result.status).toBe('confirmado');
@@ -128,9 +127,7 @@ describe('Order Integration', () => {
     it('should throw when order not found in database', async () => {
       mockOrderRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        controller.findOne('550e8400-e29b-41d4-a716-446655440099'),
-      ).rejects.toThrow();
+      await expect(controller.findOne('550e8400-e29b-41d4-a716-446655440099')).rejects.toThrow();
     });
   });
 
@@ -153,10 +150,7 @@ describe('Order Integration', () => {
 
       mockAddItemToOrderUseCase.execute.mockResolvedValue(addedItem);
 
-      const result = await controller.addItem(
-        '550e8400-e29b-41d4-a716-446655440010',
-        itemData as any,
-      );
+      const result = await controller.addItem('550e8400-e29b-41d4-a716-446655440010', itemData);
 
       expect(result.subtotal).toBe(50.0);
       expect(mockAddItemToOrderUseCase.execute).toHaveBeenCalledWith({
@@ -178,9 +172,7 @@ describe('Order Integration', () => {
 
       mockConfirmOrderUseCase.execute.mockResolvedValue(confirmedOrder);
 
-      const result = await controller.confirm(
-        '550e8400-e29b-41d4-a716-446655440010',
-      );
+      const result = await controller.confirm('550e8400-e29b-41d4-a716-446655440010');
 
       expect(result.status).toBe('confirmado');
       expect(mockConfirmOrderUseCase.execute).toHaveBeenCalledWith({
@@ -201,9 +193,7 @@ describe('Order Integration', () => {
 
       mockCancelOrderUseCase.execute.mockResolvedValue(cancelledOrder);
 
-      const result = await controller.cancel(
-        '550e8400-e29b-41d4-a716-446655440010',
-      );
+      const result = await controller.cancel('550e8400-e29b-41d4-a716-446655440010');
 
       expect(result.currentStatus).toBe('cancelado');
       expect(result.stockReverted).toBe(true);
@@ -222,13 +212,13 @@ describe('Order Integration', () => {
         updatedAt: new Date(),
       };
 
-      mockTransitionOrderStatusUseCase.execute.mockResolvedValue(
-        transitionedOrder,
-      );
+      mockTransitionOrderStatusUseCase.execute.mockResolvedValue(transitionedOrder);
+
+      const statusBody = { status: 'em_separacao' } as unknown as TransitionStatusDto;
 
       const result = await controller.transitionStatus(
         '550e8400-e29b-41d4-a716-446655440010',
-        { status: 'em_separacao' } as any,
+        statusBody,
       );
 
       expect(result.currentStatus).toBe('em_separacao');

@@ -135,13 +135,16 @@ function createOrderInState(state: OrderStatusValue): OrderAggregate {
 
 // --- Generators ---
 
-const itemArb = fc.record({
-  quantity: fc.integer({ min: 1, max: 100 }),
-  unitPrice: fc.integer({ min: 1, max: 999999 }),
-}).map(({ quantity, unitPrice }) => ({
-  quantity,
-  unitPrice: Number((unitPrice / 100).toFixed(2)),
-})).filter(({ unitPrice }) => unitPrice > 0);
+const itemArb = fc
+  .record({
+    quantity: fc.integer({ min: 1, max: 100 }),
+    unitPrice: fc.integer({ min: 1, max: 999999 }),
+  })
+  .map(({ quantity, unitPrice }) => ({
+    quantity,
+    unitPrice: Number((unitPrice / 100).toFixed(2)),
+  }))
+  .filter(({ unitPrice }) => unitPrice > 0);
 
 const itemsArb = fc.array(itemArb, { minLength: 1, maxLength: 20 });
 
@@ -247,14 +250,17 @@ describe('Property Tests — Order Module', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.array(
-            fc.record({
-              quantity: fc.integer({ min: 1, max: 50 }),
-              unitPrice: fc.integer({ min: 1, max: 99999 }),
-            }).map(({ quantity, unitPrice }) => ({
-              quantity,
-              unitPrice: Number((unitPrice / 100).toFixed(2)),
-              productId: uuidv4(),
-            })).filter(({ unitPrice }) => unitPrice > 0),
+            fc
+              .record({
+                quantity: fc.integer({ min: 1, max: 50 }),
+                unitPrice: fc.integer({ min: 1, max: 99999 }),
+              })
+              .map(({ quantity, unitPrice }) => ({
+                quantity,
+                unitPrice: Number((unitPrice / 100).toFixed(2)),
+                productId: uuidv4(),
+              }))
+              .filter(({ unitPrice }) => unitPrice > 0),
             { minLength: 1, maxLength: 5 },
           ),
           async (items) => {
@@ -279,14 +285,8 @@ describe('Property Tests — Order Module', () => {
               initialStockPerProduct.set(item.productId, stock);
             }
 
-            const confirmUseCase = new ConfirmOrderUseCase(
-              orderRepo as any,
-              inventoryRepo as any,
-            );
-            const cancelUseCase = new CancelOrderUseCase(
-              orderRepo as any,
-              inventoryRepo as any,
-            );
+            const confirmUseCase = new ConfirmOrderUseCase(orderRepo, inventoryRepo);
+            const cancelUseCase = new CancelOrderUseCase(orderRepo, inventoryRepo);
 
             // Act — confirm order
             await confirmUseCase.execute({ orderId: order.id });

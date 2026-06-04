@@ -64,17 +64,13 @@ describe('OrderStatus', () => {
     it('when delivered attempts any transition, then throws BusinessRuleException', () => {
       const delivered = OrderStatus.create('delivered');
 
-      expect(() => delivered.transitionTo('cancelled')).toThrow(
-        BusinessRuleException,
-      );
+      expect(() => delivered.transitionTo('cancelled')).toThrow(BusinessRuleException);
     });
 
     it('when draft attempts to transition to shipped, then throws BusinessRuleException', () => {
       const draft = OrderStatus.create('draft');
 
-      expect(() => draft.transitionTo('shipped')).toThrow(
-        BusinessRuleException,
-      );
+      expect(() => draft.transitionTo('shipped')).toThrow(BusinessRuleException);
     });
   });
 

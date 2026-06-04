@@ -32,10 +32,7 @@ describe('CreateOrderUseCase', () => {
       delete: jest.fn(),
     };
 
-    useCase = new CreateOrderUseCase(
-      orderRepository as any,
-      customerRepository as any,
-    );
+    useCase = new CreateOrderUseCase(orderRepository, customerRepository);
   });
 
   const customerId = '550e8400-e29b-41d4-a716-446655440000';
@@ -45,7 +42,10 @@ describe('CreateOrderUseCase', () => {
       customerRepository.findById.mockResolvedValue({ id: customerId, name: 'John' });
       orderRepository.save.mockImplementation((order) => {
         Object.defineProperty(order, '_id', { value: 'order-uuid', writable: true });
-        Object.defineProperty(order, '_createdAt', { value: new Date('2024-01-15'), writable: true });
+        Object.defineProperty(order, '_createdAt', {
+          value: new Date('2024-01-15'),
+          writable: true,
+        });
         return Promise.resolve(order);
       });
 
@@ -61,9 +61,7 @@ describe('CreateOrderUseCase', () => {
     it('when customer does not exist, then throws NotFoundException', async () => {
       customerRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        useCase.execute({ customerId }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(useCase.execute({ customerId })).rejects.toThrow(NotFoundException);
     });
 
     it('when paymentTypeId is provided, then order is created with it', async () => {
@@ -71,7 +69,10 @@ describe('CreateOrderUseCase', () => {
       customerRepository.findById.mockResolvedValue({ id: customerId, name: 'John' });
       orderRepository.save.mockImplementation((order) => {
         Object.defineProperty(order, '_id', { value: 'order-uuid', writable: true });
-        Object.defineProperty(order, '_createdAt', { value: new Date('2024-01-15'), writable: true });
+        Object.defineProperty(order, '_createdAt', {
+          value: new Date('2024-01-15'),
+          writable: true,
+        });
         return Promise.resolve(order);
       });
 

@@ -29,10 +29,7 @@ describe('CancelOrderUseCase', () => {
       getBalance: jest.fn(),
     };
 
-    useCase = new CancelOrderUseCase(
-      orderRepository as any,
-      inventoryRepository as any,
-    );
+    useCase = new CancelOrderUseCase(orderRepository, inventoryRepository);
   });
 
   const orderId = '550e8400-e29b-41d4-a716-446655440000';
@@ -55,7 +52,7 @@ describe('CancelOrderUseCase', () => {
     it('when order is confirmed, then cancels and reverts stock', async () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
-      order.addItem(productId1, 5, 10.00);
+      order.addItem(productId1, 5, 10.0);
       // Transition to confirmed via the public setter (intentional violation)
       order.status = 'confirmed';
 
@@ -77,7 +74,7 @@ describe('CancelOrderUseCase', () => {
     it('when order is in_separation, then cancels and reverts stock', async () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
-      order.addItem(productId1, 3, 20.00);
+      order.addItem(productId1, 3, 20.0);
       order.status = 'in_separation';
 
       orderRepository.findById.mockResolvedValue(order);
@@ -98,9 +95,7 @@ describe('CancelOrderUseCase', () => {
     it('when order does not exist, then throws NotFoundException', async () => {
       orderRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        useCase.execute({ orderId }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(useCase.execute({ orderId })).rejects.toThrow(NotFoundException);
     });
 
     it('when order is in delivered state, then throws BusinessRuleException', async () => {
@@ -110,9 +105,7 @@ describe('CancelOrderUseCase', () => {
 
       orderRepository.findById.mockResolvedValue(order);
 
-      await expect(
-        useCase.execute({ orderId }),
-      ).rejects.toThrow(BusinessRuleException);
+      await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
     });
   });
 });
