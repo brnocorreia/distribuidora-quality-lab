@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { dataSourceOptions } from '@shared/infrastructure/database/typeorm.config';
+import { buildTypeOrmOptions } from '@shared/infrastructure/database/typeorm.config';
 import { HealthModule } from '@shared/infrastructure/health/health.module';
 import { MetricsModule } from '@shared/observability/metrics/metrics.module';
 import { LoggingModule } from '@shared/infrastructure/logging/logging.module';
@@ -14,7 +15,19 @@ import { OrderModule } from '@modules/order/order.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(dataSourceOptions),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) =>
+        buildTypeOrmOptions({
+          databaseUrl: configService.getOrThrow<string>('DATABASE_URL'),
+          nodeEnv: configService.get<string>('NODE_ENV'),
+        }),
+    }),
     HealthModule,
     MetricsModule,
     LoggingModule,

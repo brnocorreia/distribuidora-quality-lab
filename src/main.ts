@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from '@shared/infrastructure/filters/global-exception.filter';
@@ -26,7 +27,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
 }
 
