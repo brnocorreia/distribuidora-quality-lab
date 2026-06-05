@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { GlobalExceptionFilter } from '@shared/infrastructure/filters/global-exception.filter';
 import {
   ValidationException,
@@ -34,7 +34,7 @@ describe('GlobalExceptionFilter', () => {
         });
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
         expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -55,7 +55,7 @@ describe('GlobalExceptionFilter', () => {
         const exception = new NotFoundException('Product not found');
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
         expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
@@ -77,7 +77,7 @@ describe('GlobalExceptionFilter', () => {
         });
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
         expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
@@ -102,12 +102,10 @@ describe('GlobalExceptionFilter', () => {
         });
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
-        expect(mockResponse.status).toHaveBeenCalledWith(
-          HttpStatus.UNPROCESSABLE_ENTITY,
-        );
+        expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
         expect(mockResponse.json).toHaveBeenCalledWith(
           expect.objectContaining({
             statusCode: 422,
@@ -125,7 +123,7 @@ describe('GlobalExceptionFilter', () => {
         const exception = new HttpException('Forbidden', HttpStatus.FORBIDDEN);
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
         expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
@@ -152,7 +150,7 @@ describe('GlobalExceptionFilter', () => {
         );
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
         expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -175,12 +173,10 @@ describe('GlobalExceptionFilter', () => {
         const exception = new Error('Something unexpected');
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
-        expect(mockResponse.status).toHaveBeenCalledWith(
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
+        expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
         expect(mockResponse.json).toHaveBeenCalledWith(
           expect.objectContaining({
             statusCode: 500,
@@ -197,14 +193,12 @@ describe('GlobalExceptionFilter', () => {
         const exception = new NotFoundException('Not found');
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
         const responseBody = mockResponse.json.mock.calls[0][0];
         expect(responseBody.timestamp).toBeDefined();
-        expect(new Date(responseBody.timestamp).toISOString()).toBe(
-          responseBody.timestamp,
-        );
+        expect(new Date(responseBody.timestamp).toISOString()).toBe(responseBody.timestamp);
       });
 
       it('omits details when exception has no details', () => {
@@ -212,7 +206,7 @@ describe('GlobalExceptionFilter', () => {
         const exception = new NotFoundException('Not found');
 
         // Act
-        filter.catch(exception, mockHost as any);
+        filter.catch(exception, mockHost as unknown as ArgumentsHost);
 
         // Assert
         const responseBody = mockResponse.json.mock.calls[0][0];
