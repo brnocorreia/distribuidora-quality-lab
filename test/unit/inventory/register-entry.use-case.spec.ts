@@ -78,47 +78,5 @@ describe('RegisterEntryUseCase', () => {
         useCase.execute({ ...validInput, quantity: -5 }),
       ).rejects.toThrow(ValidationException);
     });
-
-    it('when product is unavailable and entry is registered, then marks product as available', async () => {
-      const product = {
-        id: validInput.productId,
-        available: false,
-        markAsAvailable: jest.fn(),
-      };
-      productRepository.findById.mockResolvedValue(product);
-      inventoryRepository.getBalance.mockResolvedValue(10);
-      inventoryRepository.save.mockImplementation((movement) => {
-        Object.defineProperty(movement, '_id', { value: 'generated-uuid', writable: true });
-        Object.defineProperty(movement, '_createdAt', { value: new Date('2024-01-15'), writable: true });
-        return Promise.resolve(movement);
-      });
-
-      const result = await useCase.execute(validInput);
-
-      expect(result.productId).toBe(validInput.productId);
-      expect(result.type).toBe('entry');
-      expect(product.markAsAvailable).toHaveBeenCalledTimes(1);
-      expect(productRepository.save).toHaveBeenCalledWith(product);
-    });
-
-    it('when product is already available and entry is registered, then does not modify availability', async () => {
-      const product = {
-        id: validInput.productId,
-        available: true,
-        markAsAvailable: jest.fn(),
-      };
-      productRepository.findById.mockResolvedValue(product);
-      inventoryRepository.getBalance.mockResolvedValue(15);
-      inventoryRepository.save.mockImplementation((movement) => {
-        Object.defineProperty(movement, '_id', { value: 'generated-uuid', writable: true });
-        Object.defineProperty(movement, '_createdAt', { value: new Date('2024-01-15'), writable: true });
-        return Promise.resolve(movement);
-      });
-
-      await useCase.execute(validInput);
-
-      expect(product.markAsAvailable).not.toHaveBeenCalled();
-      expect(productRepository.save).not.toHaveBeenCalled();
-    });
   });
 });

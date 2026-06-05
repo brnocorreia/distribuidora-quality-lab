@@ -44,13 +44,6 @@ export class RegisterEntryUseCase {
 
     const saved = await this.inventoryRepository.save(movement);
 
-    // Bugfix: If product was unavailable, mark it as available when stock is added
-    const currentBalance = await this.inventoryRepository.getBalance(input.productId);
-    if (!product.available && currentBalance > 0) {
-      product.markAsAvailable();
-      await this.productRepository.save(product);
-    }
-
     return {
       id: saved.id,
       productId: saved.productId,
