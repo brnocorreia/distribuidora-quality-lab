@@ -105,5 +105,18 @@ describe('ConfirmOrderUseCase', () => {
 
       expect(inventoryRepository.save).not.toHaveBeenCalled();
     });
+
+    it('when stock is insufficient, then does not persist the order at all', async () => {
+      const order = createDraftOrderWithItems();
+      orderRepository.findById.mockResolvedValue(order);
+      inventoryRepository.getBalance
+        .mockResolvedValueOnce(1) // productId1 insufficient
+        .mockResolvedValueOnce(1); // productId2 insufficient
+
+      await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
+
+      // Bug fix: orderRepository.save must NOT be called on the failure path
+      expect(orderRepository.save).not.toHaveBeenCalled();
+    });
   });
 });

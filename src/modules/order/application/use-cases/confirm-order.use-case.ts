@@ -41,10 +41,13 @@ export class ConfirmOrderUseCase {
     }
 
     // Req 4.10: Reject confirmation of order without items
-    // This is also enforced by the aggregate's confirm() method
-    order.confirm();
+    if (order.items.length === 0) {
+      throw new BusinessRuleException('Cannot confirm an order without items', {
+        orderId: input.orderId,
+      });
+    }
 
-    // Req 4.7: Validate stock for all items before decrementing
+    // Req 4.7: Validate stock for all items BEFORE transitioning state
     const insufficientItems: InsufficientStockItem[] = [];
 
     for (const item of order.items) {
@@ -59,14 +62,13 @@ export class ConfirmOrderUseCase {
     }
 
     if (insufficientItems.length > 0) {
-      // Revert the status change — order stays in draft
-      order.status = 'draft';
-      await this.orderRepository.save(order);
-
       throw new BusinessRuleException('Insufficient stock for one or more items', {
         items: insufficientItems,
       });
     }
+
+    // Only transition state after all validations pass
+    order.confirm();
 
     // Req 4.6: Decrement stock for each item
     for (const item of order.items) {
