@@ -1,9 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Entity as DomainEntity } from '@shared/domain/entity';
 import { ValidationException } from '@shared/domain/exceptions';
+import { OrderAggregate } from '../aggregates/order.aggregate';
 
 interface CreateOrderItemProps {
-  orderId: string;
+  orderId?: string;
+  order?: OrderAggregate;
   productId: string;
   quantity: number;
   unitPrice: number;
@@ -15,7 +17,11 @@ export class OrderItem extends DomainEntity {
   private _id: string;
 
   @Column({ name: 'order_id', type: 'uuid' })
-  private _orderId: string;
+  private _orderId: string | undefined;
+
+  @ManyToOne(() => OrderAggregate, (order) => order.items)
+  @JoinColumn({ name: 'order_id' })
+  private _order: OrderAggregate | undefined;
 
   @Column({ name: 'product_id', type: 'uuid' })
   private _productId: string;
@@ -34,7 +40,11 @@ export class OrderItem extends DomainEntity {
   }
 
   get orderId(): string {
-    return this._orderId;
+    return (this._orderId || (this._order ? this._order.id : undefined)) as string;
+  }
+
+  get order(): OrderAggregate | undefined {
+    return this._order;
   }
 
   get productId(): string {
@@ -64,6 +74,7 @@ export class OrderItem extends DomainEntity {
 
     const item = new OrderItem();
     item._orderId = props.orderId;
+    item._order = props.order;
     item._productId = props.productId;
     item._quantity = props.quantity;
     item._unitPrice = props.unitPrice;

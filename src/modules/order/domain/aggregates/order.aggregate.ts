@@ -34,8 +34,7 @@ export class OrderAggregate extends AggregateRoot {
   @Column({ name: 'payment_type_id', type: 'uuid', nullable: true })
   private _paymentTypeId: string | null;
 
-  @OneToMany(() => OrderItem, (item) => item.orderId, { eager: true, cascade: true })
-  @JoinColumn({ name: 'id' })
+  @OneToMany(() => OrderItem, (item) => item.order, { eager: true, cascade: true })
   private _items: OrderItem[];
 
   @CreateDateColumn({ name: 'created_at' })
@@ -70,7 +69,7 @@ export class OrderAggregate extends AggregateRoot {
   }
 
   get totalAmount(): number {
-    return this._totalAmount;
+    return Number(this._totalAmount);
   }
 
   set totalAmount(value: number) {
@@ -119,6 +118,7 @@ export class OrderAggregate extends AggregateRoot {
 
     const item = OrderItem.create({
       orderId: this._id,
+      order: this,
       productId,
       quantity,
       unitPrice,
