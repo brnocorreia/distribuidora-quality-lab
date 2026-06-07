@@ -40,22 +40,26 @@ export class ConfirmOrderUseCase {
       throw new NotFoundException(`Order with id ${input.orderId} not found`);
     }
 
-    // Req 4.10: Reject confirmation of order without items
     if (order.items.length === 0) {
       throw new BusinessRuleException('Cannot confirm an order without items', {
         orderId: input.orderId,
       });
     }
 
-    // Req 4.7: Validate stock for all items BEFORE transitioning state
+    const consolidatedDemand = new Map<string, number>();
+    for (const item of order.items) {
+      const current = consolidatedDemand.get(item.productId) || 0;
+      consolidatedDemand.set(item.productId, current + item.quantity);
+    }
+
     const insufficientItems: InsufficientStockItem[] = [];
 
-    for (const item of order.items) {
-      const balance = await this.inventoryRepository.getBalance(item.productId);
-      if (balance < item.quantity) {
+    for (const [productId, quantity] of consolidatedDemand.entries()) {
+      const balance = await this.inventoryRepository.getBalance(productId);
+      if (balance < quantity) {
         insufficientItems.push({
-          productId: item.productId,
-          requested: item.quantity,
+          productId,
+          requested: quantity,
           available: balance,
         });
       }
@@ -67,15 +71,13 @@ export class ConfirmOrderUseCase {
       });
     }
 
-    // Only transition state after all validations pass
     order.confirm();
 
-    // Req 4.6: Decrement stock for each item
-    for (const item of order.items) {
+    for (const [productId, quantity] of consolidatedDemand.entries()) {
       const movement = InventoryMovement.create({
-        productId: item.productId,
+        productId,
         type: 'withdrawal',
-        quantity: item.quantity,
+        quantity,
         reason: `Order ${input.orderId} confirmation`,
       });
       await this.inventoryRepository.save(movement);

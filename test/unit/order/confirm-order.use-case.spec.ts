@@ -49,8 +49,8 @@ describe('ConfirmOrderUseCase', () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
       inventoryRepository.getBalance
-        .mockResolvedValueOnce(10) // productId1 has 10 available
-        .mockResolvedValueOnce(5); // productId2 has 5 available
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5);
       inventoryRepository.save.mockImplementation((movement) => {
         Object.defineProperty(movement, '_id', { value: 'mov-uuid', writable: true });
         Object.defineProperty(movement, '_createdAt', { value: new Date(), writable: true });
@@ -83,13 +83,12 @@ describe('ConfirmOrderUseCase', () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
       inventoryRepository.getBalance
-        .mockResolvedValueOnce(10) // productId1 OK
-        .mockResolvedValueOnce(1); // productId2 insufficient (needs 2, has 1)
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(1);
       orderRepository.save.mockResolvedValue(order);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
 
-      // Order should remain in draft after failed confirmation
       expect(order.status).toBe('draft');
     });
 
@@ -97,8 +96,8 @@ describe('ConfirmOrderUseCase', () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
       inventoryRepository.getBalance
-        .mockResolvedValueOnce(1) // productId1 insufficient (needs 3, has 1)
-        .mockResolvedValueOnce(1); // productId2 insufficient (needs 2, has 1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1);
       orderRepository.save.mockResolvedValue(order);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
@@ -110,13 +109,43 @@ describe('ConfirmOrderUseCase', () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
       inventoryRepository.getBalance
-        .mockResolvedValueOnce(1) // productId1 insufficient
-        .mockResolvedValueOnce(1); // productId2 insufficient
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
 
-      // Bug fix: orderRepository.save must NOT be called on the failure path
       expect(orderRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('when the sum of duplicate items exceeds stock, then throws BusinessRuleException', async () => {
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+      
+      (order as any)._items = [
+        { productId: productId1, quantity: 7, subtotal: 70 },
+        { productId: productId1, quantity: 5, subtotal: 50 },
+      ];
+      
+      orderRepository.findById.mockResolvedValue(order);
+      inventoryRepository.getBalance.mockResolvedValue(10); 
+
+      await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
+    });
+
+    it('when items are consolidated, then saves inventory only once per product', async () => {
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+      (order as any)._items = [
+        { productId: productId1, quantity: 2, subtotal: 20 },
+        { productId: productId1, quantity: 3, subtotal: 30 },
+      ];
+      
+      orderRepository.findById.mockResolvedValue(order);
+      inventoryRepository.getBalance.mockResolvedValue(100);
+
+      await useCase.execute({ orderId });
+
+      expect(inventoryRepository.save).toHaveBeenCalledTimes(1);
     });
   });
 });
