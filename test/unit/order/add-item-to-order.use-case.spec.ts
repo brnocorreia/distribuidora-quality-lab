@@ -1,6 +1,6 @@
 import { AddItemToOrderUseCase } from '@modules/order/application/use-cases/add-item-to-order.use-case';
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
-import { NotFoundException } from '@shared/domain/exceptions';
+import { BusinessRuleException, NotFoundException } from '@shared/domain/exceptions';
 
 describe('AddItemToOrderUseCase', () => {
   let useCase: AddItemToOrderUseCase;
@@ -43,7 +43,11 @@ describe('AddItemToOrderUseCase', () => {
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
 
       orderRepository.findById.mockResolvedValue(order);
-      productRepository.findById.mockResolvedValue({ id: productId, name: 'Widget' });
+      productRepository.findById.mockResolvedValue({
+        id: productId,
+        name: 'Widget',
+        unitPrice: 25.0,
+      });
       orderRepository.save.mockResolvedValue(order);
 
       const result = await useCase.execute({
@@ -57,6 +61,24 @@ describe('AddItemToOrderUseCase', () => {
       expect(result.quantity).toBe(3);
       expect(result.unitPrice).toBe(25.0);
       expect(result.subtotal).toBe(75.0);
+    });
+
+    it('when unit price does not match product price, then throws BusinessRuleException', async () => {
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+
+      orderRepository.findById.mockResolvedValue(order);
+      productRepository.findById.mockResolvedValue({
+        id: productId,
+        name: 'Widget',
+        unitPrice: 25.0,
+      });
+
+      await expect(
+        useCase.execute({ orderId, productId, quantity: 1, unitPrice: 1.0 }),
+      ).rejects.toThrow(BusinessRuleException);
+
+      expect(orderRepository.save).not.toHaveBeenCalled();
     });
 
     it('when order does not exist, then throws NotFoundException', async () => {
@@ -85,7 +107,11 @@ describe('AddItemToOrderUseCase', () => {
       order.confirm();
 
       orderRepository.findById.mockResolvedValue(order);
-      productRepository.findById.mockResolvedValue({ id: productId, name: 'Widget' });
+      productRepository.findById.mockResolvedValue({
+        id: productId,
+        name: 'Widget',
+        unitPrice: 10.0,
+      });
 
       await expect(
         useCase.execute({ orderId, productId, quantity: 1, unitPrice: 10.0 }),

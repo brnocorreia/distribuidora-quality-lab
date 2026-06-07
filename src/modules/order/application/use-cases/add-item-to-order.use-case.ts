@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
 import { ProductRepository } from '../../../product/domain/repositories/product.repository';
-import { NotFoundException } from '@shared/domain/exceptions';
+import { BusinessRuleException, NotFoundException } from '@shared/domain/exceptions';
 
 export interface AddItemToOrderInput {
   orderId: string;
@@ -39,6 +39,17 @@ export class AddItemToOrderUseCase {
 
     if (!product) {
       throw new NotFoundException(`Product with id ${input.productId} not found`);
+    }
+
+    const inputPriceInCents = Math.round(input.unitPrice * 100);
+    const productPriceInCents = Math.round(product.unitPrice * 100);
+
+    if (inputPriceInCents !== productPriceInCents) {
+      throw new BusinessRuleException('Unit price does not match product price', {
+        productId: input.productId,
+        providedUnitPrice: input.unitPrice,
+        productUnitPrice: product.unitPrice,
+      });
     }
 
     const item = order.addItem(input.productId, input.quantity, input.unitPrice);
