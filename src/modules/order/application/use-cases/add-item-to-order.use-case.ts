@@ -41,6 +41,13 @@ export class AddItemToOrderUseCase {
       throw new NotFoundException(`Product with id ${input.productId} not found`);
     }
 
+    if (product.available === false) {
+      throw new BusinessRuleException('Product is unavailable', {
+        productId: input.productId,
+        reason: 'Product is unavailable and cannot be added to orders',
+      });
+    }
+
     const inputPriceInCents = Math.round(input.unitPrice * 100);
     const productPriceInCents = Math.round(product.unitPrice * 100);
 

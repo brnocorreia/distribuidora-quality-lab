@@ -47,6 +47,7 @@ describe('AddItemToOrderUseCase', () => {
         id: productId,
         name: 'Widget',
         unitPrice: 25.0,
+        available: true,
       });
       orderRepository.save.mockResolvedValue(order);
 
@@ -72,10 +73,30 @@ describe('AddItemToOrderUseCase', () => {
         id: productId,
         name: 'Widget',
         unitPrice: 25.0,
+        available: true,
       });
 
       await expect(
         useCase.execute({ orderId, productId, quantity: 1, unitPrice: 1.0 }),
+      ).rejects.toThrow(BusinessRuleException);
+
+      expect(orderRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('when product is unavailable, then throws BusinessRuleException', async () => {
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+
+      orderRepository.findById.mockResolvedValue(order);
+      productRepository.findById.mockResolvedValue({
+        id: productId,
+        name: 'Widget',
+        unitPrice: 25.0,
+        available: false,
+      });
+
+      await expect(
+        useCase.execute({ orderId, productId, quantity: 1, unitPrice: 25.0 }),
       ).rejects.toThrow(BusinessRuleException);
 
       expect(orderRepository.save).not.toHaveBeenCalled();
@@ -111,6 +132,7 @@ describe('AddItemToOrderUseCase', () => {
         id: productId,
         name: 'Widget',
         unitPrice: 10.0,
+        available: true,
       });
 
       await expect(
