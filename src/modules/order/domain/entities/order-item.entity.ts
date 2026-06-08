@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Entity as DomainEntity } from '@shared/domain/entity';
 import { ValidationException } from '@shared/domain/exceptions';
 import { OrderAggregate } from '../aggregates/order.aggregate';

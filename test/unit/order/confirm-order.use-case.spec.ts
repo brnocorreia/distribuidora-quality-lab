@@ -48,9 +48,7 @@ describe('ConfirmOrderUseCase', () => {
     it('when order has items and stock is sufficient, then confirms and decrements stock', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance
-        .mockResolvedValueOnce(10)
-        .mockResolvedValueOnce(5);
+      inventoryRepository.getBalance.mockResolvedValueOnce(10).mockResolvedValueOnce(5);
       inventoryRepository.save.mockImplementation((movement) => {
         Object.defineProperty(movement, '_id', { value: 'mov-uuid', writable: true });
         Object.defineProperty(movement, '_createdAt', { value: new Date(), writable: true });
@@ -82,9 +80,7 @@ describe('ConfirmOrderUseCase', () => {
     it('when stock is insufficient for one item, then rejects and reports which items failed', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance
-        .mockResolvedValueOnce(10)
-        .mockResolvedValueOnce(1);
+      inventoryRepository.getBalance.mockResolvedValueOnce(10).mockResolvedValueOnce(1);
       orderRepository.save.mockResolvedValue(order);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
@@ -95,9 +91,7 @@ describe('ConfirmOrderUseCase', () => {
     it('when stock is insufficient, then does not decrement any inventory', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance
-        .mockResolvedValueOnce(1)
-        .mockResolvedValueOnce(1);
+      inventoryRepository.getBalance.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
       orderRepository.save.mockResolvedValue(order);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
@@ -108,9 +102,7 @@ describe('ConfirmOrderUseCase', () => {
     it('when stock is insufficient, then does not persist the order at all', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance
-        .mockResolvedValueOnce(1)
-        .mockResolvedValueOnce(1);
+      inventoryRepository.getBalance.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
 
@@ -120,14 +112,14 @@ describe('ConfirmOrderUseCase', () => {
     it('when the sum of duplicate items exceeds stock, then throws BusinessRuleException', async () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
-      
+
       (order as any)._items = [
         { productId: productId1, quantity: 7, subtotal: 70 },
         { productId: productId1, quantity: 5, subtotal: 50 },
       ];
-      
+
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance.mockResolvedValue(10); 
+      inventoryRepository.getBalance.mockResolvedValue(10);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
     });
@@ -139,7 +131,7 @@ describe('ConfirmOrderUseCase', () => {
         { productId: productId1, quantity: 2, subtotal: 20 },
         { productId: productId1, quantity: 3, subtotal: 30 },
       ];
-      
+
       orderRepository.findById.mockResolvedValue(order);
       inventoryRepository.getBalance.mockResolvedValue(100);
 
