@@ -18,6 +18,10 @@
     "test:property": "jest --testPathPattern=test/property --passWithNoTests",
     "test:integration": "jest --testPathPattern=test/integration --passWithNoTests",
     "test:coverage": "jest --coverage --passWithNoTests",
+    "test:coverage:order": "jest --config=jest.order.config.js --coverage --testPathPattern=order --passWithNoTests",
+    "test:coverage:order:unit": "jest --config=jest.order.config.js --testPathPattern=test/unit/order --coverage --passWithNoTests",
+    "test:coverage:order:integration": "jest --config=jest.order.config.js --testPathPattern=test/integration/order --coverage --passWithNoTests",
+    "test:coverage:order:property": "jest --config=jest.order.config.js --testPathPattern=test/property/order --coverage --passWithNoTests",
     "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
   },
@@ -49,6 +53,7 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.13",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^20.17.10",
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
