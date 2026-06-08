@@ -79,9 +79,9 @@ describe('TransitionOrderStatusUseCase', () => {
     it('when order does not exist, then throws NotFoundException', async () => {
       orderRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        useCase.execute({ orderId, targetStatus: 'in_separation' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(useCase.execute({ orderId, targetStatus: 'in_separation' })).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(orderRepository.save).not.toHaveBeenCalled();
     });
@@ -97,9 +97,9 @@ describe('TransitionOrderStatusUseCase', () => {
 
       orderRepository.findById.mockResolvedValue(order);
 
-      await expect(
-        useCase.execute({ orderId, targetStatus: 'in_separation' }),
-      ).rejects.toThrow(BusinessRuleException);
+      await expect(useCase.execute({ orderId, targetStatus: 'in_separation' })).rejects.toThrow(
+        BusinessRuleException,
+      );
 
       expect(orderRepository.save).not.toHaveBeenCalled();
     });
@@ -110,9 +110,9 @@ describe('TransitionOrderStatusUseCase', () => {
 
       orderRepository.findById.mockResolvedValue(order);
 
-      await expect(
-        useCase.execute({ orderId, targetStatus: 'shipped' }),
-      ).rejects.toThrow(BusinessRuleException);
+      await expect(useCase.execute({ orderId, targetStatus: 'shipped' })).rejects.toThrow(
+        BusinessRuleException,
+      );
 
       expect(orderRepository.save).not.toHaveBeenCalled();
     });
