@@ -1,10 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
 import {
   InventoryRepository,
   INVENTORY_REPOSITORY,
 } from '../../../inventory/domain/repositories/inventory.repository';
 import { InventoryMovement } from '../../../inventory/domain/entities/inventory-movement.entity';
+import { OrderAggregate } from '../../domain/aggregates/order.aggregate';
 import { NotFoundException, BusinessRuleException } from '@shared/domain/exceptions';
 
 export interface ConfirmOrderInput {
@@ -31,6 +33,7 @@ export class ConfirmOrderUseCase {
     private readonly orderRepository: OrderRepository,
     @Inject(INVENTORY_REPOSITORY)
     private readonly inventoryRepository: InventoryRepository,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(input: ConfirmOrderInput): Promise<ConfirmOrderOutput> {
@@ -73,17 +76,18 @@ export class ConfirmOrderUseCase {
 
     order.confirm();
 
-    for (const [productId, quantity] of consolidatedDemand.entries()) {
-      const movement = InventoryMovement.create({
-        productId,
-        type: 'withdrawal',
-        quantity,
-        reason: `Order ${input.orderId} confirmation`,
-      });
-      await this.inventoryRepository.save(movement);
-    }
-
-    await this.orderRepository.save(order);
+    await this.dataSource.transaction(async (manager) => {
+      for (const [productId, quantity] of consolidatedDemand.entries()) {
+        const movement = InventoryMovement.create({
+          productId,
+          type: 'withdrawal',
+          quantity,
+          reason: `Order ${input.orderId} confirmation`,
+        });
+        await manager.save(InventoryMovement, movement);
+      }
+      await manager.save(OrderAggregate, order);
+    });
 
     return {
       id: order.id,

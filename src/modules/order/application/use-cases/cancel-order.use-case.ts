@@ -1,10 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
 import {
   InventoryRepository,
   INVENTORY_REPOSITORY,
 } from '../../../inventory/domain/repositories/inventory.repository';
 import { InventoryMovement } from '../../../inventory/domain/entities/inventory-movement.entity';
+import { OrderAggregate } from '../../domain/aggregates/order.aggregate';
 import { NotFoundException } from '@shared/domain/exceptions';
 
 export interface CancelOrderInput {
@@ -26,6 +28,7 @@ export class CancelOrderUseCase {
     private readonly orderRepository: OrderRepository,
     @Inject(INVENTORY_REPOSITORY)
     private readonly inventoryRepository: InventoryRepository,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(input: CancelOrderInput): Promise<CancelOrderOutput> {
@@ -43,18 +46,19 @@ export class CancelOrderUseCase {
     // Req 4.8: Revert stock for confirmed or in_separation orders
     const shouldRevertStock = previousStatus === 'confirmed' || previousStatus === 'in_separation';
 
-    if (shouldRevertStock) {
-      for (const item of order.items) {
-        const movement = InventoryMovement.create({
-          productId: item.productId,
-          type: 'entry',
-          quantity: item.quantity,
-        });
-        await this.inventoryRepository.save(movement);
+    await this.dataSource.transaction(async (manager) => {
+      if (shouldRevertStock) {
+        for (const item of order.items) {
+          const movement = InventoryMovement.create({
+            productId: item.productId,
+            type: 'entry',
+            quantity: item.quantity,
+          });
+          await manager.save(InventoryMovement, movement);
+        }
       }
-    }
-
-    await this.orderRepository.save(order);
+      await manager.save(OrderAggregate, order);
+    });
 
     return {
       id: order.id,
