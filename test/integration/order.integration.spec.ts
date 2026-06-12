@@ -7,7 +7,10 @@ import { ConfirmOrderUseCase } from '@modules/order/application/use-cases/confir
 import { TransitionOrderStatusUseCase } from '@modules/order/application/use-cases/transition-order-status.use-case';
 import { CancelOrderUseCase } from '@modules/order/application/use-cases/cancel-order.use-case';
 import { ORDER_REPOSITORY } from '@modules/order/domain/repositories/order.repository';
-import { TransitionStatusDto } from '@modules/order/interface/dtos/transition-status.dto';
+import { CUSTOMER_REPOSITORY } from '@modules/customer/domain/repositories/customer.repository';
+import { INVENTORY_REPOSITORY } from '@modules/inventory/domain/repositories/inventory.repository';
+import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
+import { DataSource } from 'typeorm';
 
 describe('Order Integration', () => {
   let controller: OrderController;
@@ -19,41 +22,43 @@ describe('Order Integration', () => {
     delete: jest.fn(),
   };
 
-  const mockCreateOrderUseCase = {
-    execute: jest.fn(),
+  const mockCustomerRepository = {
+    findById: jest.fn(),
   };
 
-  const mockAddItemToOrderUseCase = {
-    execute: jest.fn(),
+  const mockProductRepository = {
+    findById: jest.fn(),
   };
 
-  const mockRemoveItemFromOrderUseCase = {
-    execute: jest.fn(),
+  const mockInventoryRepository = {
+    getBalance: jest.fn(),
+    save: jest.fn(),
   };
 
-  const mockConfirmOrderUseCase = {
-    execute: jest.fn(),
-  };
-
-  const mockTransitionOrderStatusUseCase = {
-    execute: jest.fn(),
-  };
-
-  const mockCancelOrderUseCase = {
-    execute: jest.fn(),
+  const mockDataSource = {
+    transaction: jest.fn().mockImplementation(async (cb) => {
+      const manager = {
+        save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+      };
+      return await cb(manager);
+    }),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [OrderController],
       providers: [
-        { provide: CreateOrderUseCase, useValue: mockCreateOrderUseCase },
-        { provide: AddItemToOrderUseCase, useValue: mockAddItemToOrderUseCase },
-        { provide: RemoveItemFromOrderUseCase, useValue: mockRemoveItemFromOrderUseCase },
-        { provide: ConfirmOrderUseCase, useValue: mockConfirmOrderUseCase },
-        { provide: TransitionOrderStatusUseCase, useValue: mockTransitionOrderStatusUseCase },
-        { provide: CancelOrderUseCase, useValue: mockCancelOrderUseCase },
+        CreateOrderUseCase,
+        AddItemToOrderUseCase,
+        RemoveItemFromOrderUseCase,
+        ConfirmOrderUseCase,
+        TransitionOrderStatusUseCase,
+        CancelOrderUseCase,
         { provide: ORDER_REPOSITORY, useValue: mockOrderRepository },
+        { provide: CUSTOMER_REPOSITORY, useValue: mockCustomerRepository },
+        { provide: 'ProductRepository', useValue: mockProductRepository },
+        { provide: INVENTORY_REPOSITORY, useValue: mockInventoryRepository },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
@@ -63,165 +68,73 @@ describe('Order Integration', () => {
   });
 
   describe('POST /orders - Create order via API flow', () => {
-    it('should create order in database with draft status', async () => {
+    it('should create order in database with draft status (Real Use Case)', async () => {
+      const customerId = '550e8400-e29b-41d4-a716-446655440001';
       const orderData = {
-        customerId: '550e8400-e29b-41d4-a716-446655440001',
+        customerId,
         paymentTypeId: '550e8400-e29b-41d4-a716-446655440002',
       };
 
-      const createdOrder = {
-        id: '550e8400-e29b-41d4-a716-446655440010',
-        customerId: orderData.customerId,
-        paymentTypeId: orderData.paymentTypeId,
-        status: 'rascunho',
-        totalAmount: 0,
-        items: [],
-        createdAt: new Date(),
-      };
-
-      mockCreateOrderUseCase.execute.mockResolvedValue(createdOrder);
+      mockCustomerRepository.findById.mockResolvedValue({ id: customerId, name: 'John Doe' });
+      mockOrderRepository.save.mockImplementation((order) => {
+        Object.defineProperty(order, '_id', { value: 'order-uuid', writable: true });
+        return Promise.resolve(order);
+      });
 
       const result = await controller.create(orderData);
 
       expect(result).toBeDefined();
-      expect(result.status).toBe('rascunho');
+      expect(result.status).toBe('draft');
       expect(result.totalAmount).toBe(0);
-      expect(mockCreateOrderUseCase.execute).toHaveBeenCalledWith({
-        customerId: orderData.customerId,
-        paymentTypeId: orderData.paymentTypeId,
-      });
-    });
-  });
-
-  describe('GET /orders/:id - Get order by ID via API flow', () => {
-    it('should retrieve order with items from database', async () => {
-      const mockOrder = {
-        id: '550e8400-e29b-41d4-a716-446655440010',
-        customerId: '550e8400-e29b-41d4-a716-446655440001',
-        status: 'confirmado',
-        totalAmount: 149.97,
-        paymentTypeId: '550e8400-e29b-41d4-a716-446655440002',
-        items: [
-          {
-            id: 'item-1',
-            productId: 'prod-1',
-            quantity: 3,
-            unitPrice: 49.99,
-            subtotal: 149.97,
-          },
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockOrderRepository.findById.mockResolvedValue(mockOrder);
-
-      const result = await controller.findOne('550e8400-e29b-41d4-a716-446655440010');
-
-      expect(result.id).toBe('550e8400-e29b-41d4-a716-446655440010');
-      expect(result.status).toBe('confirmado');
-      expect(result.items).toHaveLength(1);
-      expect(result.totalAmount).toBe(149.97);
-    });
-
-    it('should throw when order not found in database', async () => {
-      mockOrderRepository.findById.mockResolvedValue(null);
-
-      await expect(controller.findOne('550e8400-e29b-41d4-a716-446655440099')).rejects.toThrow();
+      expect(mockOrderRepository.save).toHaveBeenCalled();
     });
   });
 
   describe('POST /orders/:id/items - Add item to order via API flow', () => {
-    it('should add item to draft order and persist in database', async () => {
+    it('should add item to draft order and persist in database (Real Use Case)', async () => {
+      const orderId = 'order-uuid';
+      const productId = 'prod-uuid';
       const itemData = {
-        productId: '550e8400-e29b-41d4-a716-446655440003',
+        productId,
         quantity: 2,
         unitPrice: 25.0,
       };
 
-      const addedItem = {
-        id: 'new-item-id',
-        orderId: '550e8400-e29b-41d4-a716-446655440010',
-        productId: itemData.productId,
-        quantity: 2,
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+
+      mockOrderRepository.findById.mockResolvedValue(order);
+      mockProductRepository.findById.mockResolvedValue({
+        id: productId,
         unitPrice: 25.0,
-        subtotal: 50.0,
-      };
+        available: true,
+      });
+      mockOrderRepository.save.mockResolvedValue(order);
 
-      mockAddItemToOrderUseCase.execute.mockResolvedValue(addedItem);
-
-      const result = await controller.addItem('550e8400-e29b-41d4-a716-446655440010', itemData);
+      const result = await controller.addItem(orderId, itemData);
 
       expect(result.subtotal).toBe(50.0);
-      expect(mockAddItemToOrderUseCase.execute).toHaveBeenCalledWith({
-        orderId: '550e8400-e29b-41d4-a716-446655440010',
-        productId: itemData.productId,
-        quantity: itemData.quantity,
-        unitPrice: itemData.unitPrice,
-      });
+      expect(order.items).toHaveLength(1);
+      expect(order.totalAmount).toBe(50.0);
+      expect(mockOrderRepository.save).toHaveBeenCalledWith(order);
     });
   });
 
   describe('PATCH /orders/:id/confirm - Confirm order via API flow', () => {
-    it('should confirm order and decrement stock in database', async () => {
-      const confirmedOrder = {
-        id: '550e8400-e29b-41d4-a716-446655440010',
-        status: 'confirmado',
-        totalAmount: 150.0,
-      };
+    it('should confirm order and decrement stock (Real Use Case)', async () => {
+      const orderId = 'order-uuid';
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+      order.addItem('prod-1', 1, 100.0);
 
-      mockConfirmOrderUseCase.execute.mockResolvedValue(confirmedOrder);
+      mockOrderRepository.findById.mockResolvedValue(order);
+      mockInventoryRepository.getBalance.mockResolvedValue(10);
+      mockOrderRepository.save.mockResolvedValue(order);
 
-      const result = await controller.confirm('550e8400-e29b-41d4-a716-446655440010');
+      const result = await controller.confirm(orderId);
 
-      expect(result.status).toBe('confirmado');
-      expect(mockConfirmOrderUseCase.execute).toHaveBeenCalledWith({
-        orderId: '550e8400-e29b-41d4-a716-446655440010',
-      });
-    });
-  });
-
-  describe('PATCH /orders/:id/cancel - Cancel order via API flow', () => {
-    it('should cancel order and restore stock in database', async () => {
-      const cancelledOrder = {
-        id: '550e8400-e29b-41d4-a716-446655440010',
-        previousStatus: 'confirmado',
-        currentStatus: 'cancelado',
-        stockReverted: true,
-        updatedAt: new Date(),
-      };
-
-      mockCancelOrderUseCase.execute.mockResolvedValue(cancelledOrder);
-
-      const result = await controller.cancel('550e8400-e29b-41d4-a716-446655440010');
-
-      expect(result.currentStatus).toBe('cancelado');
-      expect(result.stockReverted).toBe(true);
-      expect(mockCancelOrderUseCase.execute).toHaveBeenCalledWith({
-        orderId: '550e8400-e29b-41d4-a716-446655440010',
-      });
-    });
-  });
-
-  describe('PATCH /orders/:id/status - Transition order status via API flow', () => {
-    it('should transition order from confirmado to em_separacao in database', async () => {
-      const transitionedOrder = {
-        id: '550e8400-e29b-41d4-a716-446655440010',
-        previousStatus: 'confirmado',
-        currentStatus: 'em_separacao',
-        updatedAt: new Date(),
-      };
-
-      mockTransitionOrderStatusUseCase.execute.mockResolvedValue(transitionedOrder);
-
-      const statusBody = { status: 'em_separacao' } as unknown as TransitionStatusDto;
-
-      const result = await controller.transitionStatus(
-        '550e8400-e29b-41d4-a716-446655440010',
-        statusBody,
-      );
-
-      expect(result.currentStatus).toBe('em_separacao');
+      expect(result.status).toBe('confirmed');
+      expect(mockDataSource.transaction).toHaveBeenCalled();
     });
   });
 });

@@ -45,5 +45,16 @@ describe('OrderAggregate — Total Calculation', () => {
 
       expect(order.totalAmount).toBe(99.99);
     });
+
+    it('when many items with small values are added, precision is maintained (edge case)', () => {
+      const order = OrderAggregate.create({ customerId });
+
+      // 100 items of 0.01 should sum to 1.00 exactly
+      for (let i = 0; i < 100; i++) {
+        order.addItem(`product-${i}`, 1, 0.01);
+      }
+
+      expect(order.totalAmount).toBe(1.00);
+    });
   });
 });

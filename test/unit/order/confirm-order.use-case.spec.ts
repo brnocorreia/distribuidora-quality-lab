@@ -15,6 +15,12 @@ describe('ConfirmOrderUseCase', () => {
     save: jest.Mock;
     getBalance: jest.Mock;
   };
+  let mockManager: {
+    save: jest.Mock;
+  };
+  let mockDataSource: {
+    transaction: jest.Mock;
+  };
 
   beforeEach(() => {
     orderRepository = {
@@ -28,8 +34,20 @@ describe('ConfirmOrderUseCase', () => {
       save: jest.fn(),
       getBalance: jest.fn(),
     };
+    mockManager = {
+      save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+    };
+    mockDataSource = {
+      transaction: jest.fn().mockImplementation(async (cb) => {
+        return await cb(mockManager);
+      }),
+    };
 
-    useCase = new ConfirmOrderUseCase(orderRepository, inventoryRepository);
+    useCase = new ConfirmOrderUseCase(
+      orderRepository as any,
+      inventoryRepository as any,
+      mockDataSource as any,
+    );
   });
 
   const orderId = '550e8400-e29b-41d4-a716-446655440000';
@@ -49,18 +67,13 @@ describe('ConfirmOrderUseCase', () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
       inventoryRepository.getBalance.mockResolvedValueOnce(10).mockResolvedValueOnce(5);
-      inventoryRepository.save.mockImplementation((movement) => {
-        Object.defineProperty(movement, '_id', { value: 'mov-uuid', writable: true });
-        Object.defineProperty(movement, '_createdAt', { value: new Date(), writable: true });
-        return Promise.resolve(movement);
-      });
-      orderRepository.save.mockResolvedValue(order);
-
+      
       const result = await useCase.execute({ orderId });
 
       expect(result.status).toBe('confirmed');
-      expect(inventoryRepository.save).toHaveBeenCalledTimes(2);
-      expect(orderRepository.save).toHaveBeenCalled();
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+      // 2 movements + 1 order
+      expect(mockManager.save).toHaveBeenCalledTimes(3);
     });
 
     it('when order does not exist, then throws NotFoundException', async () => {
@@ -137,7 +150,19 @@ describe('ConfirmOrderUseCase', () => {
 
       await useCase.execute({ orderId });
 
-      expect(inventoryRepository.save).toHaveBeenCalledTimes(1);
+      // 1 consolidated movement + 1 order
+      expect(mockManager.save).toHaveBeenCalledTimes(2);
+    });
+
+    it('when order is already confirmed, then throws BusinessRuleException (re-confirmation check)', async () => {
+      const order = createDraftOrderWithItems();
+      // Transition to confirmed
+      order.confirm();
+      
+      orderRepository.findById.mockResolvedValue(order);
+
+      await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
+      expect(orderRepository.save).not.toHaveBeenCalled();
     });
   });
 });
