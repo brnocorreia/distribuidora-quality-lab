@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: ['*']
   pull_request:
     branches: [main]
 
@@ -55,6 +55,7 @@ jobs:
           echo "Security scan completed"
 
       - name: Generate SBOM
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           echo "Generating Software Bill of Materials..."
           echo "SBOM generation complete"
