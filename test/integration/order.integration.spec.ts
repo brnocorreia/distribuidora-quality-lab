@@ -10,10 +10,14 @@ import { ORDER_REPOSITORY } from '@modules/order/domain/repositories/order.repos
 import { CUSTOMER_REPOSITORY } from '@modules/customer/domain/repositories/customer.repository';
 import { INVENTORY_REPOSITORY } from '@modules/inventory/domain/repositories/inventory.repository';
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
+import { InventoryMovement } from '@modules/inventory/domain/entities/inventory-movement.entity';
 import { DataSource } from 'typeorm';
 
 describe('Order Integration', () => {
   let controller: OrderController;
+  let mockTransactionManager: {
+    save: jest.Mock;
+  };
 
   const mockOrderRepository = {
     findById: jest.fn(),
@@ -37,10 +41,10 @@ describe('Order Integration', () => {
 
   const mockDataSource = {
     transaction: jest.fn().mockImplementation(async (cb) => {
-      const manager = {
-        save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+      mockTransactionManager = {
+        save: jest.fn().mockImplementation((...args) => Promise.resolve(args[1] ?? args[0])),
       };
-      return await cb(manager);
+      return await cb(mockTransactionManager);
     }),
   };
 
@@ -121,11 +125,12 @@ describe('Order Integration', () => {
   });
 
   describe('PATCH /orders/:id/confirm - Confirm order via API flow', () => {
-    it('should confirm order and decrement stock (Real Use Case)', async () => {
+    it('should confirm order and persist withdrawal movement through use case flow', async () => {
       const orderId = 'order-uuid';
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
-      order.addItem('prod-1', 1, 100.0);
+      const productId = 'prod-1';
+      order.addItem(productId, 1, 100.0);
 
       mockOrderRepository.findById.mockResolvedValue(order);
       mockInventoryRepository.getBalance.mockResolvedValue(10);
@@ -135,6 +140,19 @@ describe('Order Integration', () => {
 
       expect(result.status).toBe('confirmed');
       expect(mockDataSource.transaction).toHaveBeenCalled();
+      expect(mockTransactionManager.save).toHaveBeenCalledTimes(2);
+      expect(mockTransactionManager.save).toHaveBeenNthCalledWith(
+        1,
+        InventoryMovement,
+        expect.any(InventoryMovement),
+      );
+      expect(mockTransactionManager.save).toHaveBeenNthCalledWith(2, OrderAggregate, order);
+
+      const withdrawal = mockTransactionManager.save.mock.calls[0][1] as InventoryMovement;
+      expect(withdrawal.type).toBe('withdrawal');
+      expect(withdrawal.productId).toBe(productId);
+      expect(withdrawal.quantity).toBe(1);
+      expect(order.status).toBe('confirmed');
     });
   });
 });
