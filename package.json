@@ -23,7 +23,8 @@
     "test:coverage:order:integration": "jest --config=jest.order.config.js --testPathPattern=test/integration/order --coverage --passWithNoTests",
     "test:coverage:order:property": "jest --config=jest.order.config.js --testPathPattern=test/property/order --coverage --passWithNoTests",
     "test:watch": "jest --watch",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "prepare": "husky"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
@@ -38,6 +39,7 @@
     "@opentelemetry/semantic-conventions": "^1.41.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "husky": "^9.1.7",
     "lodash": "4.17.19",
     "minimist": "1.2.0",
     "pg": "^8.13.1",
