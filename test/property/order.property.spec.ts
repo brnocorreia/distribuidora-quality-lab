@@ -84,6 +84,31 @@ class InMemoryInventoryRepository implements InventoryRepository {
   }
 }
 
+function createInMemoryDataSource(
+  orderRepo: InMemoryOrderRepository,
+  inventoryRepo: InMemoryInventoryRepository,
+) {
+  return {
+    transaction: jest.fn().mockImplementation(async (cb) => {
+      const manager = {
+        save: jest.fn().mockImplementation(async (entityClass, entity) => {
+          if (entityClass === InventoryMovement) {
+            return inventoryRepo.save(entity);
+          }
+
+          if (entityClass === OrderAggregate) {
+            return orderRepo.save(entity);
+          }
+
+          return entity;
+        }),
+      };
+
+      return cb(manager);
+    }),
+  };
+}
+
 // --- Helpers ---
 
 function createOrderWithItems(
@@ -285,8 +310,17 @@ describe('Property Tests — Order Module', () => {
               initialStockPerProduct.set(item.productId, stock);
             }
 
-            const confirmUseCase = new ConfirmOrderUseCase(orderRepo, inventoryRepo);
-            const cancelUseCase = new CancelOrderUseCase(orderRepo, inventoryRepo);
+            const dataSource = createInMemoryDataSource(orderRepo, inventoryRepo);
+            const confirmUseCase = new ConfirmOrderUseCase(
+              orderRepo,
+              inventoryRepo,
+              dataSource as any,
+            );
+            const cancelUseCase = new CancelOrderUseCase(
+              orderRepo,
+              inventoryRepo,
+              dataSource as any,
+            );
 
             // Act — confirm order
             await confirmUseCase.execute({ orderId: order.id });

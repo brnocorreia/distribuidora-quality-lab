@@ -1,5 +1,6 @@
 import { CancelOrderUseCase } from '@modules/order/application/use-cases/cancel-order.use-case';
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
+import { InventoryMovement } from '@modules/inventory/domain/entities/inventory-movement.entity';
 import { NotFoundException, BusinessRuleException } from '@shared/domain/exceptions';
 
 describe('CancelOrderUseCase', () => {
@@ -15,6 +16,12 @@ describe('CancelOrderUseCase', () => {
     save: jest.Mock;
     getBalance: jest.Mock;
   };
+  let mockManager: {
+    save: jest.Mock;
+  };
+  let mockDataSource: {
+    transaction: jest.Mock;
+  };
 
   beforeEach(() => {
     orderRepository = {
@@ -28,8 +35,18 @@ describe('CancelOrderUseCase', () => {
       save: jest.fn(),
       getBalance: jest.fn(),
     };
+    mockManager = {
+      save: jest.fn().mockImplementation((...args) => Promise.resolve(args[1] ?? args[0])),
+    };
+    mockDataSource = {
+      transaction: jest.fn().mockImplementation(async (cb) => cb(mockManager)),
+    };
 
-    useCase = new CancelOrderUseCase(orderRepository, inventoryRepository);
+    useCase = new CancelOrderUseCase(
+      orderRepository as any,
+      inventoryRepository as any,
+      mockDataSource as any,
+    );
   });
 
   const orderId = '550e8400-e29b-41d4-a716-446655440000';
@@ -47,6 +64,9 @@ describe('CancelOrderUseCase', () => {
       expect(result.currentStatus).toBe('cancelled');
       expect(result.stockReverted).toBe(false);
       expect(inventoryRepository.save).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(mockManager.save).toHaveBeenCalledTimes(1);
+      expect(mockManager.save).toHaveBeenCalledWith(OrderAggregate, order);
     });
 
     it('when order is confirmed, then cancels and reverts stock', async () => {
@@ -58,17 +78,24 @@ describe('CancelOrderUseCase', () => {
 
       orderRepository.findById.mockResolvedValue(order);
       orderRepository.save.mockResolvedValue(order);
-      inventoryRepository.save.mockImplementation((movement) => {
-        Object.defineProperty(movement, '_id', { value: 'mov-uuid', writable: true });
-        Object.defineProperty(movement, '_createdAt', { value: new Date(), writable: true });
-        return Promise.resolve(movement);
-      });
 
       const result = await useCase.execute({ orderId });
 
       expect(result.currentStatus).toBe('cancelled');
       expect(result.stockReverted).toBe(true);
-      expect(inventoryRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(mockManager.save).toHaveBeenCalledTimes(2);
+      expect(mockManager.save).toHaveBeenNthCalledWith(
+        1,
+        InventoryMovement,
+        expect.any(InventoryMovement),
+      );
+      expect(mockManager.save).toHaveBeenNthCalledWith(2, OrderAggregate, order);
+
+      const stockReturn = mockManager.save.mock.calls[0][1] as InventoryMovement;
+      expect(stockReturn.type).toBe('entry');
+      expect(stockReturn.productId).toBe(productId1);
+      expect(stockReturn.quantity).toBe(5);
     });
 
     it('when order is in_separation, then cancels and reverts stock', async () => {
@@ -79,17 +106,24 @@ describe('CancelOrderUseCase', () => {
 
       orderRepository.findById.mockResolvedValue(order);
       orderRepository.save.mockResolvedValue(order);
-      inventoryRepository.save.mockImplementation((movement) => {
-        Object.defineProperty(movement, '_id', { value: 'mov-uuid', writable: true });
-        Object.defineProperty(movement, '_createdAt', { value: new Date(), writable: true });
-        return Promise.resolve(movement);
-      });
 
       const result = await useCase.execute({ orderId });
 
       expect(result.currentStatus).toBe('cancelled');
       expect(result.stockReverted).toBe(true);
-      expect(inventoryRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+      expect(mockManager.save).toHaveBeenCalledTimes(2);
+      expect(mockManager.save).toHaveBeenNthCalledWith(
+        1,
+        InventoryMovement,
+        expect.any(InventoryMovement),
+      );
+      expect(mockManager.save).toHaveBeenNthCalledWith(2, OrderAggregate, order);
+
+      const stockReturn = mockManager.save.mock.calls[0][1] as InventoryMovement;
+      expect(stockReturn.type).toBe('entry');
+      expect(stockReturn.productId).toBe(productId1);
+      expect(stockReturn.quantity).toBe(3);
     });
 
     it('when order does not exist, then throws NotFoundException', async () => {
