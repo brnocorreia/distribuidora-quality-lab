@@ -155,4 +155,50 @@ describe('Order Integration', () => {
       expect(order.status).toBe('confirmed');
     });
   });
+
+  describe('PATCH /orders/:id/cancel - Cancel order via API flow', () => {
+    it('should cancel a confirmed order and revert stock', async () => {
+      const orderId = 'order-uuid';
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+      const productId = 'prod-1';
+      order.addItem(productId, 5, 10.0);
+      order.confirm();
+
+      mockOrderRepository.findById.mockResolvedValue(order);
+      mockOrderRepository.save.mockResolvedValue(order);
+
+      const result = await controller.cancel(orderId);
+
+      expect(result.currentStatus).toBe('cancelled');
+      expect(result.stockReverted).toBe(true);
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+      
+      const savedEntities = mockTransactionManager.save.mock.calls.map(call => call[1] ?? call[0]);
+      
+      const revertedMovement = savedEntities.find(e => e.type === 'entry' && e.productId === productId);
+      expect(revertedMovement).toBeDefined();
+      expect(revertedMovement.quantity).toBe(5);
+      
+      expect(order.status).toBe('cancelled');
+    });
+
+    it('should cancel a draft order without reverting stock', async () => {
+      const orderId = 'order-uuid';
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+      order.addItem('prod-1', 1, 10.0);
+
+      mockOrderRepository.findById.mockResolvedValue(order);
+
+      const result = await controller.cancel(orderId);
+
+      expect(result.currentStatus).toBe('cancelled');
+      expect(result.stockReverted).toBe(false);
+      
+      const savedEntities = mockTransactionManager.save.mock.calls.map(call => call[1] ?? call[0]);
+      const entryMovements = savedEntities.filter(e => e.type === 'entry');
+      expect(entryMovements).toHaveLength(0);
+    });
+  });
 });

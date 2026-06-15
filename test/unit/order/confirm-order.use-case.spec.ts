@@ -72,8 +72,25 @@ describe('ConfirmOrderUseCase', () => {
 
       expect(result.status).toBe('confirmed');
       expect(mockDataSource.transaction).toHaveBeenCalled();
-      // 2 movements + 1 order
-      expect(mockManager.save).toHaveBeenCalledTimes(3);
+      
+      const savedMovements = mockManager.save.mock.calls
+        .filter(call => call[0].name === 'InventoryMovement')
+        .map(call => call[1]);
+      
+      expect(savedMovements).toHaveLength(2);
+      expect(savedMovements).toContainEqual(expect.objectContaining({
+        productId: productId1,
+        quantity: 3,
+        type: 'withdrawal'
+      }));
+      expect(savedMovements).toContainEqual(expect.objectContaining({
+        productId: productId2,
+        quantity: 2,
+        type: 'withdrawal'
+      }));
+
+      expect(mockManager.save).toHaveBeenCalledWith(OrderAggregate, order);
+      expect(order.status).toBe('confirmed');
     });
 
     it('when order does not exist, then throws NotFoundException', async () => {

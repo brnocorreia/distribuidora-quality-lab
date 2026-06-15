@@ -144,6 +144,20 @@ export class OrderAggregate extends AggregateRoot {
     this._totalAmount = this.calculateTotal();
   }
 
+  updateItemQuantity(itemId: string, quantity: number): void {
+    this.ensureDraftState('update item quantity');
+
+    const item = this._items.find((i) => i.id === itemId);
+    if (!item) {
+      throw new BusinessRuleException('Item not found in order', {
+        itemId,
+      });
+    }
+
+    item.updateQuantity(quantity);
+    this._totalAmount = this.calculateTotal();
+  }
+
   confirm(): void {
     if (this._items.length === 0) {
       throw new BusinessRuleException('Cannot confirm an order without items', {

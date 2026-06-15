@@ -103,7 +103,7 @@ export class OrderItem extends DomainEntity {
   }
 
   private static validateQuantity(quantity: number): void {
-    if (!Number.isInteger(quantity) || quantity <= 0) {
+    if (isNaN(quantity) || !Number.isInteger(quantity) || quantity <= 0) {
       throw new ValidationException('Invalid quantity', {
         quantity: ['quantity must be a positive integer greater than 0'],
       });
@@ -111,9 +111,16 @@ export class OrderItem extends DomainEntity {
   }
 
   private static validateUnitPrice(unitPrice: number): void {
-    if (unitPrice <= 0 || unitPrice > 999999.99) {
+    if (isNaN(unitPrice) || unitPrice <= 0 || unitPrice > 999999.99) {
       throw new ValidationException('Invalid unit price', {
         unitPrice: ['unitPrice must be between 0.01 and 999999.99'],
+      });
+    }
+
+    const decimals = unitPrice.toString().split('.')[1];
+    if (decimals && decimals.length > 2) {
+      throw new ValidationException('Invalid unit price precision', {
+        unitPrice: ['unitPrice must have at most 2 decimal places'],
       });
     }
   }
