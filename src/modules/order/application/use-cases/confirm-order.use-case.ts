@@ -8,7 +8,7 @@ import {
 import { InventoryMovement } from '../../../inventory/domain/entities/inventory-movement.entity';
 import { OrderAggregate } from '../../domain/aggregates/order.aggregate';
 import { NotFoundException, BusinessRuleException } from '@shared/domain/exceptions';
-
+import { ValidatePaymentForOrderUseCase } from '../../../payment-type/application/use-cases/validate-payment-for-order.use-case';
 export interface ConfirmOrderInput {
   orderId: string;
 }
@@ -33,6 +33,7 @@ export class ConfirmOrderUseCase {
     private readonly orderRepository: OrderRepository,
     @Inject(INVENTORY_REPOSITORY)
     private readonly inventoryRepository: InventoryRepository,
+    private readonly validatePayment: ValidatePaymentForOrderUseCase,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -48,6 +49,16 @@ export class ConfirmOrderUseCase {
         orderId: input.orderId,
       });
     }
+
+    if (!order.paymentTypeId) {
+      throw new BusinessRuleException('Cannot confirm an order without a payment method', {
+        orderId: input.orderId,
+      });
+    }
+    await this.validatePayment.execute({
+      paymentTypeId: order.paymentTypeId,
+      orderValue: order.totalAmount,
+    });
 
     const consolidatedDemand = new Map<string, number>();
     for (const item of order.items) {

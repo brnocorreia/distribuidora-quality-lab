@@ -11,6 +11,7 @@ import { CUSTOMER_REPOSITORY } from '@modules/customer/domain/repositories/custo
 import { INVENTORY_REPOSITORY } from '@modules/inventory/domain/repositories/inventory.repository';
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
 import { InventoryMovement } from '@modules/inventory/domain/entities/inventory-movement.entity';
+import { ValidatePaymentForOrderUseCase } from '@modules/payment-type/application/use-cases/validate-payment-for-order.use-case';
 import { DataSource } from 'typeorm';
 
 describe('Order Integration', () => {
@@ -39,6 +40,10 @@ describe('Order Integration', () => {
     save: jest.fn(),
   };
 
+  const mockValidatePaymentUseCase = {
+    execute: jest.fn().mockResolvedValue({ valid: true }),
+  };
+
   const mockDataSource = {
     transaction: jest.fn().mockImplementation(async (cb) => {
       mockTransactionManager = {
@@ -62,6 +67,7 @@ describe('Order Integration', () => {
         { provide: CUSTOMER_REPOSITORY, useValue: mockCustomerRepository },
         { provide: 'ProductRepository', useValue: mockProductRepository },
         { provide: INVENTORY_REPOSITORY, useValue: mockInventoryRepository },
+        { provide: ValidatePaymentForOrderUseCase, useValue: mockValidatePaymentUseCase },
         { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
@@ -131,6 +137,7 @@ describe('Order Integration', () => {
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       const productId = 'prod-1';
       order.addItem(productId, 1, 100.0);
+      order.setPaymentType('payment-uuid');
 
       mockOrderRepository.findById.mockResolvedValue(order);
       mockInventoryRepository.getBalance.mockResolvedValue(10);

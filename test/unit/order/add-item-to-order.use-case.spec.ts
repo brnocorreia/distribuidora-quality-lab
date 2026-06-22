@@ -125,6 +125,7 @@ describe('AddItemToOrderUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       order.addItem('other-product', 1, 10.0);
+      order.setPaymentType('payment-uuid');
       order.confirm();
 
       orderRepository.findById.mockResolvedValue(order);

@@ -19,6 +19,7 @@ describe('OrderAggregate — Total Recalculation Bug', () => {
     const order = OrderAggregate.create({ customerId });
     const item = order.addItem('product-1', 1, 10.0);
     Object.defineProperty(item, '_id', { value: 'item-1' });
+    order.setPaymentType('payment-uuid');
     order.confirm();
 
     expect(() => {

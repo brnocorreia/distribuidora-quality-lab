@@ -30,6 +30,7 @@ describe('TransitionOrderStatusUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       order.addItem(productId, 1, 10.0);
+      order.setPaymentType('payment-uuid');
       order.confirm();
 
       orderRepository.findById.mockResolvedValue(order);
@@ -47,6 +48,7 @@ describe('TransitionOrderStatusUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       order.addItem(productId, 1, 10.0);
+      order.setPaymentType('payment-uuid');
       order.confirm();
       order.transitionTo('in_separation');
 
@@ -63,6 +65,7 @@ describe('TransitionOrderStatusUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       order.addItem(productId, 1, 10.0);
+      order.setPaymentType('payment-uuid');
       order.confirm();
       order.transitionTo('in_separation');
       order.transitionTo('shipped');
@@ -90,6 +93,7 @@ describe('TransitionOrderStatusUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       order.addItem(productId, 1, 10.0);
+      order.setPaymentType('payment-uuid');
       order.confirm();
       order.transitionTo('in_separation');
       order.transitionTo('shipped');
@@ -107,6 +111,7 @@ describe('TransitionOrderStatusUseCase', () => {
     it('when order is draft, then transition to shipped throws BusinessRuleException', async () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
+      order.setPaymentType('payment-uuid');
 
       orderRepository.findById.mockResolvedValue(order);
 

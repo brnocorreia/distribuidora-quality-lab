@@ -300,6 +300,7 @@ describe('Property Tests — Order Module', () => {
             for (const item of items) {
               order.addItem(item.productId, item.quantity, item.unitPrice);
             }
+            order.setPaymentType(uuidv4());
             orderRepo.addOrder(order);
 
             // Seed sufficient stock (2x quantity to ensure enough)
@@ -310,10 +311,15 @@ describe('Property Tests — Order Module', () => {
               initialStockPerProduct.set(item.productId, stock);
             }
 
+            const mockValidatePaymentUseCase = {
+              execute: jest.fn().mockResolvedValue({ valid: true })
+            };
+
             const dataSource = createInMemoryDataSource(orderRepo, inventoryRepo);
             const confirmUseCase = new ConfirmOrderUseCase(
               orderRepo,
               inventoryRepo,
+              mockValidatePaymentUseCase as any,
               dataSource as any,
             );
             const cancelUseCase = new CancelOrderUseCase(

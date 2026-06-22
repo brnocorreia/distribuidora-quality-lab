@@ -14,6 +14,7 @@ import { OrderController } from './interface/controllers/order.controller';
 import { ProductModule } from '../product/product.module';
 import { CustomerModule } from '../customer/customer.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { PaymentTypeModule } from '../payment-type/payment-type.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { InventoryModule } from '../inventory/inventory.module';
     ProductModule,
     CustomerModule,
     InventoryModule,
+    PaymentTypeModule,
   ],
   controllers: [OrderController],
   providers: [

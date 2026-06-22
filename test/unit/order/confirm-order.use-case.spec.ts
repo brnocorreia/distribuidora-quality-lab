@@ -21,6 +21,9 @@ describe('ConfirmOrderUseCase', () => {
   let mockDataSource: {
     transaction: jest.Mock;
   };
+  let validatePaymentUseCase: {
+    execute: jest.Mock;
+  };
 
   beforeEach(() => {
     orderRepository = {
@@ -37,6 +40,9 @@ describe('ConfirmOrderUseCase', () => {
     mockManager = {
       save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
     };
+    validatePaymentUseCase = {
+      execute: jest.fn().mockResolvedValue({ valid: true }),
+    };
     mockDataSource = {
       transaction: jest.fn().mockImplementation(async (cb) => {
         return await cb(mockManager);
@@ -46,6 +52,7 @@ describe('ConfirmOrderUseCase', () => {
     useCase = new ConfirmOrderUseCase(
       orderRepository as any,
       inventoryRepository as any,
+      validatePaymentUseCase as any,
       mockDataSource as any,
     );
   });
@@ -59,6 +66,7 @@ describe('ConfirmOrderUseCase', () => {
     Object.defineProperty(order, '_id', { value: orderId, writable: true });
     order.addItem(productId1, 3, 10.0);
     order.addItem(productId2, 2, 25.5);
+      order.setPaymentType('payment-uuid');
     return order;
   }
 
@@ -143,6 +151,8 @@ describe('ConfirmOrderUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
 
+      order.setPaymentType('payment-uuid');
+
       (order as any)._items = [
         { productId: productId1, quantity: 7, subtotal: 70 },
         { productId: productId1, quantity: 5, subtotal: 50 },
@@ -157,6 +167,7 @@ describe('ConfirmOrderUseCase', () => {
     it('when items are consolidated, then saves inventory only once per product', async () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
+      order.setPaymentType('payment-uuid');
       (order as any)._items = [
         { productId: productId1, quantity: 2, subtotal: 20 },
         { productId: productId1, quantity: 3, subtotal: 30 },
@@ -180,6 +191,31 @@ describe('ConfirmOrderUseCase', () => {
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
       expect(orderRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+    it('when order has no payment type, then throws BusinessRuleException', async () => {
+    const order = createDraftOrderWithItems();
+    Object.defineProperty(order, '_paymentTypeId', { value: null }); 
+    orderRepository.findById.mockResolvedValue(order);
+
+    await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
+    expect(inventoryRepository.getBalance).not.toHaveBeenCalled(); 
+  });
+
+  it('when payment validation fails, then throws BusinessRuleException', async () => {
+    const order = createDraftOrderWithItems();
+    Object.defineProperty(order, '_paymentTypeId', { value: 'payment-uuid' });
+    orderRepository.findById.mockResolvedValue(order);
+    
+    validatePaymentUseCase.execute.mockRejectedValue(
+      new BusinessRuleException('Order value outside acceptance range')
+    );
+
+    await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
+    expect(validatePaymentUseCase.execute).toHaveBeenCalledWith({
+      paymentTypeId: 'payment-uuid',
+      orderValue: order.totalAmount,
     });
   });
 });

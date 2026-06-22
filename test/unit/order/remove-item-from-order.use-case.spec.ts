@@ -92,6 +92,7 @@ describe('RemoveItemFromOrderUseCase', () => {
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       const item = order.addItem(productId, 1, 10.0);
       Object.defineProperty(item, '_id', { value: 'item-uuid', writable: true });
+      order.setPaymentType('payment-uuid');
       order.confirm();
 
       orderRepository.findById.mockResolvedValue(order);
