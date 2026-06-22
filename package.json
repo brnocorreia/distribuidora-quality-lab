@@ -91,6 +91,7 @@
       "!src/**/*.module.ts"
     ],
     "coverageDirectory": "./coverage",
+    "coverageReporters": ["text", "json-summary", "lcov"],
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^@shared/(.*)$": "<rootDir>/src/shared/$1",
