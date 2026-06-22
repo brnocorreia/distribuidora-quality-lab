@@ -149,13 +149,13 @@ describe('Order Integration', () => {
       expect(mockDataSource.transaction).toHaveBeenCalled();
       expect(mockTransactionManager.save).toHaveBeenCalledTimes(2);
       expect(mockTransactionManager.save).toHaveBeenNthCalledWith(
-        1,
+        2,
         InventoryMovement,
         expect.any(InventoryMovement),
       );
-      expect(mockTransactionManager.save).toHaveBeenNthCalledWith(2, OrderAggregate, order);
+      expect(mockTransactionManager.save).toHaveBeenNthCalledWith(1, OrderAggregate, order);
 
-      const withdrawal = mockTransactionManager.save.mock.calls[0][1] as InventoryMovement;
+      const withdrawal = mockTransactionManager.save.mock.calls[1][1] as InventoryMovement;
       expect(withdrawal.type).toBe('withdrawal');
       expect(withdrawal.productId).toBe(productId);
       expect(withdrawal.quantity).toBe(1);

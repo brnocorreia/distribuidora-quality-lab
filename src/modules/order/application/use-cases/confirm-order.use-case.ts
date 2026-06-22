@@ -9,6 +9,7 @@ import { InventoryMovement } from '../../../inventory/domain/entities/inventory-
 import { OrderAggregate } from '../../domain/aggregates/order.aggregate';
 import { NotFoundException, BusinessRuleException } from '@shared/domain/exceptions';
 import { ValidatePaymentForOrderUseCase } from '../../../payment-type/application/use-cases/validate-payment-for-order.use-case';
+
 export interface ConfirmOrderInput {
   orderId: string;
 }
@@ -66,38 +67,39 @@ export class ConfirmOrderUseCase {
       consolidatedDemand.set(item.productId, current + item.quantity);
     }
 
-    const insufficientItems: InsufficientStockItem[] = [];
+await this.dataSource.transaction(async (manager) => {
+      
+      const balanceChecks = Array.from(consolidatedDemand.entries()).map(
+        async ([productId, quantity]) => {
+          const balance = await this.inventoryRepository.getBalance(productId);
+          if (balance < quantity) {
+            throw new BusinessRuleException(
+              `Insufficient stock for product ${productId}. Requested: ${quantity}, Available: ${balance}`,
+            );
+          }
+        }
+      );
 
-    for (const [productId, quantity] of consolidatedDemand.entries()) {
-      const balance = await this.inventoryRepository.getBalance(productId);
-      if (balance < quantity) {
-        insufficientItems.push({
-          productId,
-          requested: quantity,
-          available: balance,
-        });
-      }
-    }
+      await Promise.all(balanceChecks);
 
-    if (insufficientItems.length > 0) {
-      throw new BusinessRuleException('Insufficient stock for one or more items', {
-        items: insufficientItems,
-      });
-    }
-
-    order.confirm();
-
-    await this.dataSource.transaction(async (manager) => {
-      for (const [productId, quantity] of consolidatedDemand.entries()) {
-        const movement = InventoryMovement.create({
-          productId,
-          type: 'withdrawal',
-          quantity,
-          reason: `Order ${input.orderId} confirmation`,
-        });
-        await manager.save(InventoryMovement, movement);
-      }
+      order.confirm();
       await manager.save(OrderAggregate, order);
+
+      const movementInserts = Array.from(consolidatedDemand.entries()).map(
+              ([productId, quantity]) => {
+                
+                const movement = InventoryMovement.create({
+                  productId,
+                  type: 'withdrawal',
+                  quantity,
+                  reason: `Order ${input.orderId} confirmation`,
+                });
+                
+                return manager.save(InventoryMovement, movement);
+              }
+            );
+
+      await Promise.all(movementInserts);
     });
 
     return {

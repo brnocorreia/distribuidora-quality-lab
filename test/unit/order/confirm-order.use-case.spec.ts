@@ -17,6 +17,7 @@ describe('ConfirmOrderUseCase', () => {
   };
   let mockManager: {
     save: jest.Mock;
+    create: jest.Mock;
   };
   let mockDataSource: {
     transaction: jest.Mock;
@@ -38,7 +39,11 @@ describe('ConfirmOrderUseCase', () => {
       getBalance: jest.fn(),
     };
     mockManager = {
-      save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+      save: jest.fn().mockImplementation((...args) => {
+        const entityToSave = args.length === 2 ? args[1] : args[0];
+        return Promise.resolve(entityToSave);
+      }),
+      create: jest.fn().mockImplementation((entityName, obj) => obj),
     };
     validatePaymentUseCase = {
       execute: jest.fn().mockResolvedValue({ valid: true }),
