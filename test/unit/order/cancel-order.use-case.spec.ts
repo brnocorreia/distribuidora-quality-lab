@@ -11,11 +11,6 @@ describe('CancelOrderUseCase', () => {
     save: jest.Mock;
     delete: jest.Mock;
   };
-  let inventoryRepository: {
-    findMovementsByProductId: jest.Mock;
-    save: jest.Mock;
-    getBalance: jest.Mock;
-  };
   let mockManager: {
     save: jest.Mock;
   };
@@ -29,11 +24,6 @@ describe('CancelOrderUseCase', () => {
       findByCustomerId: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
-    };
-    inventoryRepository = {
-      findMovementsByProductId: jest.fn(),
-      save: jest.fn(),
-      getBalance: jest.fn(),
     };
     mockManager = {
       save: jest.fn().mockImplementation((...args) => Promise.resolve(args[1] ?? args[0])),
@@ -65,7 +55,6 @@ describe('CancelOrderUseCase', () => {
 
       expect(result.currentStatus).toBe('cancelled');
       expect(result.stockReverted).toBe(false);
-      expect(inventoryRepository.save).not.toHaveBeenCalled();
       expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
       expect(mockManager.save).toHaveBeenCalledTimes(1);
       expect(mockManager.save).toHaveBeenCalledWith(OrderAggregate, order);

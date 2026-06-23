@@ -312,7 +312,7 @@ describe('Property Tests — Order Module', () => {
             }
 
             const mockValidatePaymentUseCase = {
-              execute: jest.fn().mockResolvedValue({ valid: true })
+              execute: jest.fn().mockResolvedValue({ valid: true }),
             };
 
             const mockLogger = { logStructured: jest.fn() };
