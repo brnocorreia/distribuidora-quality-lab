@@ -55,10 +55,6 @@ export class OrderAggregate extends AggregateRoot {
     return this._status as OrderStatusValue;
   }
 
-  set status(value: OrderStatusValue) {
-    this._status = value;
-  }
-
   get items(): OrderItem[] {
     return this._items ? [...this._items] : [];
   }
