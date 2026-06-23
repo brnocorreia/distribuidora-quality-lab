@@ -11,6 +11,8 @@ describe('TransitionOrderStatusUseCase', () => {
     delete: jest.Mock;
   };
 
+  const mockLogger = { logStructured: jest.fn() };
+
   beforeEach(() => {
     orderRepository = {
       findById: jest.fn(),
@@ -19,7 +21,7 @@ describe('TransitionOrderStatusUseCase', () => {
       delete: jest.fn(),
     };
 
-    useCase = new TransitionOrderStatusUseCase(orderRepository);
+    useCase = new TransitionOrderStatusUseCase(orderRepository, mockLogger as any);
   });
 
   const orderId = '550e8400-e29b-41d4-a716-446655440000';

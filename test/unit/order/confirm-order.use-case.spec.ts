@@ -54,11 +54,14 @@ describe('ConfirmOrderUseCase', () => {
       }),
     };
 
+    const mockLogger = { logStructured: jest.fn() };
+
     useCase = new ConfirmOrderUseCase(
       orderRepository as any,
       inventoryRepository as any,
       validatePaymentUseCase as any,
       mockDataSource as any,
+      mockLogger as any,
     );
   });
 

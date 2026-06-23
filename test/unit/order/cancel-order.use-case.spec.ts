@@ -42,10 +42,12 @@ describe('CancelOrderUseCase', () => {
       transaction: jest.fn().mockImplementation(async (cb) => cb(mockManager)),
     };
 
+    const mockLogger = { logStructured: jest.fn() };
+
     useCase = new CancelOrderUseCase(
       orderRepository as any,
-      inventoryRepository as any,
       mockDataSource as any,
+      mockLogger as any,
     );
   });
 
@@ -73,8 +75,8 @@ describe('CancelOrderUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       order.addItem(productId1, 5, 10.0);
-      // Transition to confirmed via the public setter (intentional violation)
-      order.status = 'confirmed';
+      order.setPaymentType('payment-uuid');
+      order.confirm();
 
       orderRepository.findById.mockResolvedValue(order);
       orderRepository.save.mockResolvedValue(order);
@@ -102,7 +104,9 @@ describe('CancelOrderUseCase', () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       order.addItem(productId1, 3, 20.0);
-      order.status = 'in_separation';
+      order.setPaymentType('payment-uuid');
+      order.confirm();
+      order.transitionTo('in_separation');
 
       orderRepository.findById.mockResolvedValue(order);
       orderRepository.save.mockResolvedValue(order);
@@ -135,7 +139,7 @@ describe('CancelOrderUseCase', () => {
     it('when order is in delivered state, then throws BusinessRuleException', async () => {
       const order = OrderAggregate.create({ customerId: 'customer-uuid' });
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
-      order.status = 'delivered';
+      Object.defineProperty(order, '_status', { value: 'delivered', writable: true, configurable: true });
 
       orderRepository.findById.mockResolvedValue(order);
 

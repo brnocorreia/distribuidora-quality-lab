@@ -315,17 +315,19 @@ describe('Property Tests — Order Module', () => {
               execute: jest.fn().mockResolvedValue({ valid: true })
             };
 
+            const mockLogger = { logStructured: jest.fn() };
             const dataSource = createInMemoryDataSource(orderRepo, inventoryRepo);
             const confirmUseCase = new ConfirmOrderUseCase(
               orderRepo,
               inventoryRepo,
               mockValidatePaymentUseCase as any,
               dataSource as any,
+              mockLogger as any,
             );
             const cancelUseCase = new CancelOrderUseCase(
               orderRepo,
-              inventoryRepo,
               dataSource as any,
+              mockLogger as any,
             );
 
             // Act — confirm order

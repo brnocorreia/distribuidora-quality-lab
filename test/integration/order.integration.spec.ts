@@ -12,6 +12,7 @@ import { INVENTORY_REPOSITORY } from '@modules/inventory/domain/repositories/inv
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
 import { InventoryMovement } from '@modules/inventory/domain/entities/inventory-movement.entity';
 import { ValidatePaymentForOrderUseCase } from '@modules/payment-type/application/use-cases/validate-payment-for-order.use-case';
+import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 import { DataSource } from 'typeorm';
 
 describe('Order Integration', () => {
@@ -69,6 +70,7 @@ describe('Order Integration', () => {
         { provide: INVENTORY_REPOSITORY, useValue: mockInventoryRepository },
         { provide: ValidatePaymentForOrderUseCase, useValue: mockValidatePaymentUseCase },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: LoggerService, useValue: { logStructured: jest.fn() } },
       ],
     }).compile();
 
@@ -170,6 +172,7 @@ describe('Order Integration', () => {
       Object.defineProperty(order, '_id', { value: orderId, writable: true });
       const productId = 'prod-1';
       order.addItem(productId, 5, 10.0);
+      order.setPaymentType('payment-uuid');
       order.confirm();
 
       mockOrderRepository.findById.mockResolvedValue(order);

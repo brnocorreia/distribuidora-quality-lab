@@ -16,6 +16,7 @@ describe('CreateOrderUseCase', () => {
     save: jest.Mock;
     delete: jest.Mock;
   };
+  const mockLogger = { logStructured: jest.fn() };
 
   beforeEach(() => {
     orderRepository = {
@@ -32,7 +33,7 @@ describe('CreateOrderUseCase', () => {
       delete: jest.fn(),
     };
 
-    useCase = new CreateOrderUseCase(orderRepository, customerRepository);
+    useCase = new CreateOrderUseCase(orderRepository, customerRepository, mockLogger as any);
   });
 
   const customerId = '550e8400-e29b-41d4-a716-446655440000';

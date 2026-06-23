@@ -17,6 +17,8 @@ describe('AddItemToOrderUseCase', () => {
     delete: jest.Mock;
   };
 
+  const mockLogger = { logStructured: jest.fn() };
+
   beforeEach(() => {
     orderRepository = {
       findById: jest.fn(),
@@ -31,7 +33,7 @@ describe('AddItemToOrderUseCase', () => {
       delete: jest.fn(),
     };
 
-    useCase = new AddItemToOrderUseCase(orderRepository, productRepository);
+    useCase = new AddItemToOrderUseCase(orderRepository, productRepository, mockLogger as any);
   });
 
   const orderId = '550e8400-e29b-41d4-a716-446655440000';
