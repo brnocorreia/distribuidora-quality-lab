@@ -324,8 +324,7 @@ describe('Property Tests — Order Module', () => {
             );
             const cancelUseCase = new CancelOrderUseCase(
               orderRepo,
-              inventoryRepo,
-              dataSource as any,
+              dataSource as any
             );
 
             // Act — confirm order

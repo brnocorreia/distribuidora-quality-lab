@@ -1,10 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
-import {
-  InventoryRepository,
-  INVENTORY_REPOSITORY,
-} from '../../../inventory/domain/repositories/inventory.repository';
 import { InventoryMovement } from '../../../inventory/domain/entities/inventory-movement.entity';
 import { OrderAggregate } from '../../domain/aggregates/order.aggregate';
 import { NotFoundException } from '@shared/domain/exceptions';
@@ -26,8 +22,6 @@ export class CancelOrderUseCase {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
-    @Inject(INVENTORY_REPOSITORY)
-    private readonly inventoryRepository: InventoryRepository,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -44,6 +38,7 @@ export class CancelOrderUseCase {
     order.cancel();
 
     // Req 4.8: Revert stock for confirmed or in_separation orders
+
     const shouldRevertStock = previousStatus === 'confirmed' || previousStatus === 'in_separation';
 
     await this.dataSource.transaction(async (manager) => {
