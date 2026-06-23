@@ -4,7 +4,6 @@ import { OrderStatus, OrderStatusValue } from '@modules/order/domain/value-objec
 import { ConfirmOrderUseCase } from '@modules/order/application/use-cases/confirm-order.use-case';
 import { CancelOrderUseCase } from '@modules/order/application/use-cases/cancel-order.use-case';
 import { OrderRepository } from '@modules/order/domain/repositories/order.repository';
-import { InventoryRepository } from '@modules/inventory/domain/repositories/inventory.repository';
 import { InventoryMovement } from '@modules/inventory/domain/entities/inventory-movement.entity';
 import { BusinessRuleException } from '@shared/domain/exceptions';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,7 +35,7 @@ class InMemoryOrderRepository implements OrderRepository {
   }
 }
 
-class InMemoryInventoryRepository implements InventoryRepository {
+class InMemoryInventoryRepository {
   private movements: InventoryMovement[] = [];
 
   async findMovementsByProductId(productId: string): Promise<InventoryMovement[]> {
@@ -91,6 +90,14 @@ function createInMemoryDataSource(
   return {
     transaction: jest.fn().mockImplementation(async (cb) => {
       const manager = {
+        find: jest.fn().mockImplementation(async (entityClass, options) => {
+          if (entityClass === InventoryMovement) {
+            const productId = options?.where?._productId;
+            return inventoryRepo.findMovementsByProductId(productId);
+          }
+
+          return [];
+        }),
         save: jest.fn().mockImplementation(async (entityClass, entity) => {
           if (entityClass === InventoryMovement) {
             return inventoryRepo.save(entity);
@@ -319,7 +326,6 @@ describe('Property Tests — Order Module', () => {
             const dataSource = createInMemoryDataSource(orderRepo, inventoryRepo);
             const confirmUseCase = new ConfirmOrderUseCase(
               orderRepo,
-              inventoryRepo,
               mockValidatePaymentUseCase as any,
               dataSource as any,
               mockLogger as any,

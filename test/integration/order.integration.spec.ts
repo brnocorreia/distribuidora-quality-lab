@@ -8,7 +8,6 @@ import { TransitionOrderStatusUseCase } from '@modules/order/application/use-cas
 import { CancelOrderUseCase } from '@modules/order/application/use-cases/cancel-order.use-case';
 import { ORDER_REPOSITORY } from '@modules/order/domain/repositories/order.repository';
 import { CUSTOMER_REPOSITORY } from '@modules/customer/domain/repositories/customer.repository';
-import { INVENTORY_REPOSITORY } from '@modules/inventory/domain/repositories/inventory.repository';
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
 import { InventoryMovement } from '@modules/inventory/domain/entities/inventory-movement.entity';
 import { ValidatePaymentForOrderUseCase } from '@modules/payment-type/application/use-cases/validate-payment-for-order.use-case';
@@ -19,6 +18,7 @@ describe('Order Integration', () => {
   let controller: OrderController;
   let mockTransactionManager: {
     save: jest.Mock;
+    find: jest.Mock;
   };
 
   const mockOrderRepository = {
@@ -36,11 +36,6 @@ describe('Order Integration', () => {
     findById: jest.fn(),
   };
 
-  const mockInventoryRepository = {
-    getBalance: jest.fn(),
-    save: jest.fn(),
-  };
-
   const mockValidatePaymentUseCase = {
     execute: jest.fn().mockResolvedValue({ valid: true }),
   };
@@ -49,6 +44,7 @@ describe('Order Integration', () => {
     transaction: jest.fn().mockImplementation(async (cb) => {
       mockTransactionManager = {
         save: jest.fn().mockImplementation((...args) => Promise.resolve(args[1] ?? args[0])),
+        find: jest.fn(),
       };
       return await cb(mockTransactionManager);
     }),
@@ -67,7 +63,6 @@ describe('Order Integration', () => {
         { provide: ORDER_REPOSITORY, useValue: mockOrderRepository },
         { provide: CUSTOMER_REPOSITORY, useValue: mockCustomerRepository },
         { provide: 'ProductRepository', useValue: mockProductRepository },
-        { provide: INVENTORY_REPOSITORY, useValue: mockInventoryRepository },
         { provide: ValidatePaymentForOrderUseCase, useValue: mockValidatePaymentUseCase },
         { provide: DataSource, useValue: mockDataSource },
         { provide: LoggerService, useValue: { logStructured: jest.fn() } },
@@ -142,7 +137,20 @@ describe('Order Integration', () => {
       order.setPaymentType('payment-uuid');
 
       mockOrderRepository.findById.mockResolvedValue(order);
-      mockInventoryRepository.getBalance.mockResolvedValue(10);
+      mockTransactionManager = undefined as any;
+      mockDataSource.transaction.mockImplementationOnce(async (cb) => {
+        mockTransactionManager = {
+          save: jest.fn().mockImplementation((...args) => Promise.resolve(args[1] ?? args[0])),
+          find: jest.fn().mockResolvedValue([
+            InventoryMovement.create({
+              productId,
+              type: 'entry',
+              quantity: 10,
+            }),
+          ]),
+        };
+        return await cb(mockTransactionManager);
+      });
       mockOrderRepository.save.mockResolvedValue(order);
 
       const result = await controller.confirm(orderId);

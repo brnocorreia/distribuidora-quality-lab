@@ -1,5 +1,6 @@
 import { ConfirmOrderUseCase } from '@modules/order/application/use-cases/confirm-order.use-case';
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
+import { InventoryMovement, MovementType } from '@modules/inventory/domain/entities/inventory-movement.entity';
 import { NotFoundException, BusinessRuleException } from '@shared/domain/exceptions';
 
 describe('ConfirmOrderUseCase', () => {
@@ -10,13 +11,9 @@ describe('ConfirmOrderUseCase', () => {
     save: jest.Mock;
     delete: jest.Mock;
   };
-  let inventoryRepository: {
-    findMovementsByProductId: jest.Mock;
-    save: jest.Mock;
-    getBalance: jest.Mock;
-  };
   let mockManager: {
     save: jest.Mock;
+    find: jest.Mock;
     create: jest.Mock;
   };
   let mockDataSource: {
@@ -33,16 +30,12 @@ describe('ConfirmOrderUseCase', () => {
       save: jest.fn(),
       delete: jest.fn(),
     };
-    inventoryRepository = {
-      findMovementsByProductId: jest.fn(),
-      save: jest.fn(),
-      getBalance: jest.fn(),
-    };
     mockManager = {
       save: jest.fn().mockImplementation((...args) => {
         const entityToSave = args.length === 2 ? args[1] : args[0];
         return Promise.resolve(entityToSave);
       }),
+      find: jest.fn(),
       create: jest.fn().mockImplementation((entityName, obj) => obj),
     };
     validatePaymentUseCase = {
@@ -58,7 +51,6 @@ describe('ConfirmOrderUseCase', () => {
 
     useCase = new ConfirmOrderUseCase(
       orderRepository as any,
-      inventoryRepository as any,
       validatePaymentUseCase as any,
       mockDataSource as any,
       mockLogger as any,
@@ -74,38 +66,63 @@ describe('ConfirmOrderUseCase', () => {
     Object.defineProperty(order, '_id', { value: orderId, writable: true });
     order.addItem(productId1, 3, 10.0);
     order.addItem(productId2, 2, 25.5);
-      order.setPaymentType('payment-uuid');
+    order.setPaymentType('payment-uuid');
     return order;
+  }
+
+  function createMovement(
+    productId: string,
+    type: MovementType,
+    quantity: number,
+  ): InventoryMovement {
+    return InventoryMovement.create({
+      productId,
+      type,
+      quantity,
+      reason: type === 'withdrawal' ? 'test withdrawal' : undefined,
+    });
   }
 
   describe('execute', () => {
     it('when order has items and stock is sufficient, then confirms and decrements stock', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance.mockResolvedValueOnce(10).mockResolvedValueOnce(5);
-      
+      mockManager.find
+        .mockResolvedValueOnce([createMovement(productId1, 'entry', 10)])
+        .mockResolvedValueOnce([createMovement(productId2, 'entry', 5)]);
+
       const result = await useCase.execute({ orderId });
 
       expect(result.status).toBe('confirmed');
       expect(mockDataSource.transaction).toHaveBeenCalled();
-      
+
       const savedMovements = mockManager.save.mock.calls
-        .filter(call => call[0].name === 'InventoryMovement')
-        .map(call => call[1]);
-      
+        .filter((call) => call[0].name === 'InventoryMovement')
+        .map((call) => call[1]);
+
       expect(savedMovements).toHaveLength(2);
-      expect(savedMovements).toContainEqual(expect.objectContaining({
-        productId: productId1,
-        quantity: 3,
-        type: 'withdrawal'
-      }));
-      expect(savedMovements).toContainEqual(expect.objectContaining({
-        productId: productId2,
-        quantity: 2,
-        type: 'withdrawal'
-      }));
+      expect(savedMovements).toContainEqual(
+        expect.objectContaining({
+          productId: productId1,
+          quantity: 3,
+          type: 'withdrawal',
+        }),
+      );
+      expect(savedMovements).toContainEqual(
+        expect.objectContaining({
+          productId: productId2,
+          quantity: 2,
+          type: 'withdrawal',
+        }),
+      );
 
       expect(mockManager.save).toHaveBeenCalledWith(OrderAggregate, order);
+      expect(mockManager.find).toHaveBeenCalledWith(
+        InventoryMovement,
+        expect.objectContaining({
+          where: { _productId: productId1 },
+        }),
+      );
       expect(order.status).toBe('confirmed');
     });
 
@@ -126,7 +143,9 @@ describe('ConfirmOrderUseCase', () => {
     it('when stock is insufficient for one item, then rejects and reports which items failed', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance.mockResolvedValueOnce(10).mockResolvedValueOnce(1);
+      mockManager.find
+        .mockResolvedValueOnce([createMovement(productId1, 'entry', 10)])
+        .mockResolvedValueOnce([createMovement(productId2, 'entry', 1)]);
       orderRepository.save.mockResolvedValue(order);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
@@ -137,18 +156,25 @@ describe('ConfirmOrderUseCase', () => {
     it('when stock is insufficient, then does not decrement any inventory', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
+      mockManager.find
+        .mockResolvedValueOnce([createMovement(productId1, 'entry', 1)])
+        .mockResolvedValueOnce([createMovement(productId2, 'entry', 1)]);
       orderRepository.save.mockResolvedValue(order);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
 
-      expect(inventoryRepository.save).not.toHaveBeenCalled();
+      expect(mockManager.save).not.toHaveBeenCalledWith(
+        InventoryMovement,
+        expect.any(InventoryMovement),
+      );
     });
 
     it('when stock is insufficient, then does not persist the order at all', async () => {
       const order = createDraftOrderWithItems();
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
+      mockManager.find
+        .mockResolvedValueOnce([createMovement(productId1, 'entry', 1)])
+        .mockResolvedValueOnce([createMovement(productId2, 'entry', 1)]);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
 
@@ -167,7 +193,7 @@ describe('ConfirmOrderUseCase', () => {
       ];
 
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance.mockResolvedValue(10);
+      mockManager.find.mockResolvedValue([createMovement(productId1, 'entry', 10)]);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
     });
@@ -182,7 +208,7 @@ describe('ConfirmOrderUseCase', () => {
       ];
 
       orderRepository.findById.mockResolvedValue(order);
-      inventoryRepository.getBalance.mockResolvedValue(100);
+      mockManager.find.mockResolvedValue([createMovement(productId1, 'entry', 100)]);
 
       await useCase.execute({ orderId });
 
@@ -192,32 +218,34 @@ describe('ConfirmOrderUseCase', () => {
 
     it('when order is already confirmed, then throws BusinessRuleException (re-confirmation check)', async () => {
       const order = createDraftOrderWithItems();
-      // Transition to confirmed
       order.confirm();
-      
+
       orderRepository.findById.mockResolvedValue(order);
+      mockManager.find
+        .mockResolvedValueOnce([createMovement(productId1, 'entry', 10)])
+        .mockResolvedValueOnce([createMovement(productId2, 'entry', 10)]);
 
       await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
       expect(orderRepository.save).not.toHaveBeenCalled();
     });
   });
 
-    it('when order has no payment type, then throws BusinessRuleException', async () => {
+  it('when order has no payment type, then throws BusinessRuleException', async () => {
     const order = createDraftOrderWithItems();
-    Object.defineProperty(order, '_paymentTypeId', { value: null }); 
+    Object.defineProperty(order, '_paymentTypeId', { value: null });
     orderRepository.findById.mockResolvedValue(order);
 
     await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);
-    expect(inventoryRepository.getBalance).not.toHaveBeenCalled(); 
+    expect(mockManager.find).not.toHaveBeenCalled();
   });
 
   it('when payment validation fails, then throws BusinessRuleException', async () => {
     const order = createDraftOrderWithItems();
     Object.defineProperty(order, '_paymentTypeId', { value: 'payment-uuid' });
     orderRepository.findById.mockResolvedValue(order);
-    
+
     validatePaymentUseCase.execute.mockRejectedValue(
-      new BusinessRuleException('Order value outside acceptance range')
+      new BusinessRuleException('Order value outside acceptance range'),
     );
 
     await expect(useCase.execute({ orderId })).rejects.toThrow(BusinessRuleException);

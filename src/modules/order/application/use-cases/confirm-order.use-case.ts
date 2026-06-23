@@ -1,10 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
-import {
-  InventoryRepository,
-  INVENTORY_REPOSITORY,
-} from '../../../inventory/domain/repositories/inventory.repository';
 import { InventoryMovement } from '../../../inventory/domain/entities/inventory-movement.entity';
 import { OrderAggregate } from '../../domain/aggregates/order.aggregate';
 import { NotFoundException, BusinessRuleException } from '@shared/domain/exceptions';
@@ -33,8 +29,6 @@ export class ConfirmOrderUseCase {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
-    @Inject(INVENTORY_REPOSITORY)
-    private readonly inventoryRepository: InventoryRepository,
     private readonly validatePayment: ValidatePaymentForOrderUseCase,
     private readonly dataSource: DataSource,
     private readonly logger: LoggerService,
@@ -92,7 +86,7 @@ export class ConfirmOrderUseCase {
     await this.dataSource.transaction(async (manager) => {
       const balanceChecks = Array.from(consolidatedDemand.entries()).map(
         async ([productId, quantity]) => {
-          const balance = await this.inventoryRepository.getBalance(productId);
+          const balance = await this.getBalance(manager, productId);
           if (balance < quantity) {
             this.logger.logStructured('warn', 'Insufficient stock', {
               context: 'ConfirmOrderUseCase',
@@ -141,5 +135,20 @@ export class ConfirmOrderUseCase {
       totalAmount: order.totalAmount,
       confirmedAt: order.updatedAt,
     };
+  }
+
+  private async getBalance(manager: EntityManager, productId: string): Promise<number> {
+    const movements = await manager.find(InventoryMovement, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      where: { _productId: productId } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      order: { _createdAt: 'ASC' } as any,
+    });
+
+    return movements.reduce((balance, movement) => {
+      return movement.type === 'entry'
+        ? balance + movement.quantity
+        : balance - movement.quantity;
+    }, 0);
   }
 }

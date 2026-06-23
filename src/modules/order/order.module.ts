@@ -13,7 +13,6 @@ import { CancelOrderUseCase } from './application/use-cases/cancel-order.use-cas
 import { OrderController } from './interface/controllers/order.controller';
 import { ProductModule } from '../product/product.module';
 import { CustomerModule } from '../customer/customer.module';
-import { InventoryModule } from '../inventory/inventory.module';
 import { PaymentTypeModule } from '../payment-type/payment-type.module';
 
 @Module({
@@ -21,7 +20,6 @@ import { PaymentTypeModule } from '../payment-type/payment-type.module';
     TypeOrmModule.forFeature([OrderAggregate, OrderItem]),
     ProductModule,
     CustomerModule,
-    InventoryModule,
     PaymentTypeModule,
   ],
   controllers: [OrderController],
