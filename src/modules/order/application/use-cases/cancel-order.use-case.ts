@@ -1,13 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
-import {
-  InventoryRepository,
-  INVENTORY_REPOSITORY,
-} from '../../../inventory/domain/repositories/inventory.repository';
 import { InventoryMovement } from '../../../inventory/domain/entities/inventory-movement.entity';
 import { OrderAggregate } from '../../domain/aggregates/order.aggregate';
 import { NotFoundException } from '@shared/domain/exceptions';
+import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 
 export interface CancelOrderInput {
   orderId: string;
@@ -26,24 +23,25 @@ export class CancelOrderUseCase {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
-    @Inject(INVENTORY_REPOSITORY)
-    private readonly inventoryRepository: InventoryRepository,
     private readonly dataSource: DataSource,
+    private readonly logger: LoggerService,
   ) {}
 
   async execute(input: CancelOrderInput): Promise<CancelOrderOutput> {
     const order = await this.orderRepository.findById(input.orderId);
 
     if (!order) {
+      this.logger.logStructured('warn', 'Order not found', {
+        context: 'CancelOrderUseCase',
+        orderId: input.orderId,
+      });
       throw new NotFoundException(`Order with id ${input.orderId} not found`);
     }
 
     const previousStatus = order.status;
 
-    // Req 4.5: cancel() enforces valid transitions (only from draft, confirmed, in_separation)
     order.cancel();
 
-    // Req 4.8: Revert stock for confirmed or in_separation orders
     const shouldRevertStock = previousStatus === 'confirmed' || previousStatus === 'in_separation';
 
     await this.dataSource.transaction(async (manager) => {
@@ -58,6 +56,14 @@ export class CancelOrderUseCase {
         }
       }
       await manager.save(OrderAggregate, order);
+    });
+
+    this.logger.logStructured('info', 'Order cancelled', {
+      context: 'CancelOrderUseCase',
+      orderId: order.id,
+      previousStatus,
+      currentStatus: order.status,
+      stockReverted: shouldRevertStock,
     });
 
     return {

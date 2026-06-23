@@ -6,6 +6,7 @@ import {
   CUSTOMER_REPOSITORY,
 } from '../../../customer/domain/repositories/customer.repository';
 import { NotFoundException } from '@shared/domain/exceptions';
+import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 
 export interface CreateOrderInput {
   customerId: string;
@@ -29,12 +30,17 @@ export class CreateOrderUseCase {
     private readonly orderRepository: OrderRepository,
     @Inject(CUSTOMER_REPOSITORY)
     private readonly customerRepository: CustomerRepository,
+    private readonly logger: LoggerService,
   ) {}
 
   async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
     const customer = await this.customerRepository.findById(input.customerId);
 
     if (!customer) {
+      this.logger.logStructured('warn', 'Customer not found', {
+        context: 'CreateOrderUseCase',
+        customerId: input.customerId,
+      });
       throw new NotFoundException(`Customer with id ${input.customerId} not found`);
     }
 
@@ -44,6 +50,13 @@ export class CreateOrderUseCase {
     });
 
     const saved = await this.orderRepository.save(order);
+
+    this.logger.logStructured('info', 'Order created', {
+      context: 'CreateOrderUseCase',
+      orderId: saved.id,
+      customerId: saved.customerId,
+      paymentTypeId: saved.paymentTypeId,
+    });
 
     return {
       id: saved.id,
