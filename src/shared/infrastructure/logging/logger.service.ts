@@ -35,6 +35,16 @@ export class LoggerService implements NestLoggerService {
     this.emit('debug', message, context);
   }
 
+  logStructured(level: LogLevel, message: string, extra: Record<string, unknown>): void {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      ...extra,
+    };
+    process.stdout.write(JSON.stringify(entry) + '\n');
+  }
+
   logRequest(entry: Omit<LogEntry, 'timestamp'>): void {
     const output = {
       timestamp: new Date().toISOString(),
