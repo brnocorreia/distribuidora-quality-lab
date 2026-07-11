@@ -9,6 +9,7 @@ import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 
 export interface ConfirmOrderInput {
   orderId: string;
+  correlationId?: string;
 }
 
 export interface InsufficientStockItem {
@@ -40,6 +41,7 @@ export class ConfirmOrderUseCase {
     if (!order) {
       this.logger.logStructured('warn', 'Order not found', {
         context: 'ConfirmOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
       });
       throw new NotFoundException(`Order with id ${input.orderId} not found`);
@@ -48,6 +50,7 @@ export class ConfirmOrderUseCase {
     if (order.items.length === 0) {
       this.logger.logStructured('warn', 'Cannot confirm order without items', {
         context: 'ConfirmOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
       });
       throw new BusinessRuleException('Cannot confirm an order without items', {
@@ -58,6 +61,7 @@ export class ConfirmOrderUseCase {
     if (!order.paymentTypeId) {
       this.logger.logStructured('warn', 'Cannot confirm order without payment method', {
         context: 'ConfirmOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
       });
       throw new BusinessRuleException('Cannot confirm an order without a payment method', {
@@ -72,6 +76,7 @@ export class ConfirmOrderUseCase {
 
     this.logger.logStructured('info', 'Confirming order', {
       context: 'ConfirmOrderUseCase',
+      correlationId: input.correlationId,
       orderId: input.orderId,
       totalAmount: order.totalAmount,
       itemCount: order.items.length,

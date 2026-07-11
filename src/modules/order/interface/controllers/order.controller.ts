@@ -12,8 +12,10 @@ import {
   UsePipes,
   ValidationPipe,
   ParseUUIDPipe,
+  Headers,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { randomUUID } from 'crypto';
 import { CreateOrderUseCase } from '../../application/use-cases/create-order.use-case';
 import { AddItemToOrderUseCase } from '../../application/use-cases/add-item-to-order.use-case';
 import { RemoveItemFromOrderUseCase } from '../../application/use-cases/remove-item-from-order.use-case';
@@ -25,6 +27,7 @@ import { NotFoundException } from '@shared/domain/exceptions';
 import { CreateOrderDto } from '../dtos/create-order.dto';
 import { AddItemDto } from '../dtos/add-item.dto';
 import { TransitionStatusDto } from '../dtos/transition-status.dto';
+import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -39,18 +42,30 @@ export class OrderController {
     private readonly cancelOrderUseCase: CancelOrderUseCase,
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
+    private readonly logger: LoggerService,
   ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new order' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
   @ApiResponse({ status: 201, description: 'Order created successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 404, description: 'Customer not found' })
-  async create(@Body() dto: CreateOrderDto) {
+  async create(
+    @Body() dto: CreateOrderDto,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to create order', {
+      context: 'OrderController',
+      correlationId: cid,
+      customerId: dto.customerId,
+    });
     return this.createOrderUseCase.execute({
       customerId: dto.customerId,
       paymentTypeId: dto.paymentTypeId,
+      correlationId: cid,
     });
   }
 
@@ -117,14 +132,24 @@ export class OrderController {
 
   @Patch(':id/confirm')
   @ApiOperation({ summary: 'Confirm order' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
   @ApiResponse({ status: 200, description: 'Order confirmed successfully' })
   @ApiResponse({ status: 404, description: 'Order not found' })
   @ApiResponse({
     status: 422,
     description: 'Cannot confirm order (no items, insufficient stock, or invalid state)',
   })
-  async confirm(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.confirmOrderUseCase.execute({ orderId: id });
+  async confirm(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to confirm order', {
+      context: 'OrderController',
+      correlationId: cid,
+      orderId: id,
+    });
+    return this.confirmOrderUseCase.execute({ orderId: id, correlationId: cid });
   }
 
   @Patch(':id/status')

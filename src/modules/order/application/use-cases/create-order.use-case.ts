@@ -11,6 +11,7 @@ import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 export interface CreateOrderInput {
   customerId: string;
   paymentTypeId?: string;
+  correlationId?: string;
 }
 
 export interface CreateOrderOutput {
@@ -39,6 +40,7 @@ export class CreateOrderUseCase {
     if (!customer) {
       this.logger.logStructured('warn', 'Customer not found', {
         context: 'CreateOrderUseCase',
+        correlationId: input.correlationId,
         customerId: input.customerId,
       });
       throw new NotFoundException(`Customer with id ${input.customerId} not found`);
@@ -53,6 +55,7 @@ export class CreateOrderUseCase {
 
     this.logger.logStructured('info', 'Order created', {
       context: 'CreateOrderUseCase',
+      correlationId: input.correlationId,
       orderId: saved.id,
       customerId: saved.customerId,
       paymentTypeId: saved.paymentTypeId,
