@@ -125,6 +125,52 @@ describe('Order Integration', () => {
       expect(order.totalAmount).toBe(50.0);
       expect(mockOrderRepository.save).toHaveBeenCalledWith(order);
     });
+
+    it('should fail when adding item with negative quantity (Domain validation check without mock masking)', async () => {
+      const orderId = 'order-uuid';
+      const productId = 'prod-uuid';
+      const itemData = {
+        productId,
+        quantity: -5,
+        unitPrice: 25.0,
+      };
+
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+
+      mockOrderRepository.findById.mockResolvedValue(order);
+      mockProductRepository.findById.mockResolvedValue({
+        id: productId,
+        unitPrice: 25.0,
+        available: true,
+      });
+
+      await expect(controller.addItem(orderId, itemData)).rejects.toThrow();
+      expect(mockOrderRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should fail when adding item with negative price (Domain validation check without mock masking)', async () => {
+      const orderId = 'order-uuid';
+      const productId = 'prod-uuid';
+      const itemData = {
+        productId,
+        quantity: 2,
+        unitPrice: -10.0,
+      };
+
+      const order = OrderAggregate.create({ customerId: 'customer-uuid' });
+      Object.defineProperty(order, '_id', { value: orderId, writable: true });
+
+      mockOrderRepository.findById.mockResolvedValue(order);
+      mockProductRepository.findById.mockResolvedValue({
+        id: productId,
+        unitPrice: -10.0,
+        available: true,
+      });
+
+      await expect(controller.addItem(orderId, itemData)).rejects.toThrow();
+      expect(mockOrderRepository.save).not.toHaveBeenCalled();
+    });
   });
 
   describe('PATCH /orders/:id/confirm - Confirm order via API flow', () => {
