@@ -13,7 +13,7 @@ export class AcceptanceRule {
   static readonly MIN_ALLOWED_VALUE = 0.01;
   static readonly MAX_ALLOWED_VALUE = 999999999.99;
 
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   private _id: string;
 
   @Column('decimal', { precision: 12, scale: 2, name: 'min_value' })

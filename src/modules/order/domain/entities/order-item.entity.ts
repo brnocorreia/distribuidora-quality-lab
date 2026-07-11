@@ -20,7 +20,7 @@ interface CreateOrderItemProps {
 
 @Entity('order_items')
 export class OrderItem extends DomainEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   private _id: string;
 
   @Column({ name: 'order_id', type: 'uuid' })
@@ -33,7 +33,7 @@ export class OrderItem extends DomainEntity {
   @Column({ name: 'product_id', type: 'uuid' })
   private _productId: string;
 
-  @Column({ type: 'integer' })
+  @Column({ name: 'quantity', type: 'integer' })
   private _quantity: number;
 
   @Column('decimal', { name: 'unit_price', precision: 10, scale: 2 })

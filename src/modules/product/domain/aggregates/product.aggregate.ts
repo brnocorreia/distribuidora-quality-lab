@@ -25,22 +25,22 @@ export interface UpdateProductProps {
 
 @Entity('products')
 export class ProductAggregate extends AggregateRoot {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   private _id: string;
 
-  @Column({ length: 150 })
+  @Column({ name: 'name', length: 150 })
   private _name: string;
 
-  @Column({ length: 1000, nullable: true })
+  @Column({ name: 'description', length: 1000, nullable: true })
   private _description: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { name: 'unit_price', precision: 10, scale: 2 })
   private _unitPrice: number;
 
-  @Column({ length: 100 })
+  @Column({ name: 'category', length: 100 })
   private _category: string;
 
-  @Column({ default: true })
+  @Column({ name: 'available', default: true })
   private _available: boolean;
 
   @CreateDateColumn({ name: 'created_at' })

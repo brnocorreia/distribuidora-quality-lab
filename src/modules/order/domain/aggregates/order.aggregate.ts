@@ -19,13 +19,13 @@ interface CreateOrderProps {
 
 @Entity('orders')
 export class OrderAggregate extends AggregateRoot {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   private _id: string;
 
   @Column({ name: 'customer_id', type: 'uuid' })
   private _customerId: string;
 
-  @Column({ length: 20, default: 'draft' })
+  @Column({ name: 'status', length: 20, default: 'draft' })
   private _status: string;
 
   @Column('decimal', { name: 'total_amount', precision: 12, scale: 2, default: 0 })

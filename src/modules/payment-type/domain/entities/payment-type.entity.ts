@@ -23,16 +23,16 @@ interface UpdatePaymentTypeProps {
 
 @Entity('payment_types')
 export class PaymentTypeEntity extends DomainEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   private _id: string;
 
-  @Column({ length: 100, unique: true })
+  @Column({ name: 'name', length: 100, unique: true })
   private _name: string;
 
-  @Column({ length: 500, nullable: true })
+  @Column({ name: 'description', length: 500, nullable: true })
   private _description: string;
 
-  @Column({ default: true })
+  @Column({ name: 'active', default: true })
   private _active: boolean;
 
   @OneToMany(() => AcceptanceRule, (rule) => rule.paymentType, {

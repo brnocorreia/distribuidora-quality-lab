@@ -13,19 +13,19 @@ interface CreateMovementProps {
 
 @Entity('inventory_movements')
 export class InventoryMovement extends DomainEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   private _id: string;
 
   @Column({ name: 'product_id', type: 'uuid' })
   private _productId: string;
 
-  @Column({ length: 10 })
+  @Column({ name: 'type', length: 10 })
   private _type: string;
 
-  @Column({ type: 'integer' })
+  @Column({ name: 'quantity', type: 'integer' })
   private _quantity: number;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ name: 'reason', length: 255, nullable: true })
   private _reason: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
