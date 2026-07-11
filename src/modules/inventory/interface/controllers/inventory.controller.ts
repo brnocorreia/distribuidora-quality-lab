@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Body,
-  Inject,
   HttpCode,
   HttpStatus,
   UsePipes,
@@ -16,11 +15,6 @@ import { RegisterEntryUseCase } from '../../application/use-cases/register-entry
 import { RegisterWithdrawalUseCase } from '../../application/use-cases/register-withdrawal.use-case';
 import { GetBalanceUseCase } from '../../application/use-cases/get-balance.use-case';
 import { GetMovementHistoryUseCase } from '../../application/use-cases/get-movement-history.use-case';
-import {
-  InventoryRepository,
-  INVENTORY_REPOSITORY,
-} from '../../domain/repositories/inventory.repository';
-import { StockBalance } from '../../domain/value-objects/stock-balance.vo';
 import { RegisterEntryDto } from '../dtos/register-entry.dto';
 import { RegisterWithdrawalDto } from '../dtos/register-withdrawal.dto';
 
@@ -33,8 +27,6 @@ export class InventoryController {
     private readonly registerWithdrawalUseCase: RegisterWithdrawalUseCase,
     private readonly getBalanceUseCase: GetBalanceUseCase,
     private readonly getMovementHistoryUseCase: GetMovementHistoryUseCase,
-    @Inject(INVENTORY_REPOSITORY)
-    private readonly inventoryRepository: InventoryRepository,
   ) {}
 
   @Post('entries')
@@ -58,10 +50,6 @@ export class InventoryController {
   @ApiResponse({ status: 404, description: 'Product not found' })
   @ApiResponse({ status: 422, description: 'Insufficient stock' })
   async registerWithdrawal(@Body() dto: RegisterWithdrawalDto) {
-    const currentBalance = await this.inventoryRepository.getBalance(dto.productId);
-    const balance = StockBalance.create(currentBalance);
-    balance.subtract(dto.quantity);
-
     return this.registerWithdrawalUseCase.execute({
       productId: dto.productId,
       quantity: dto.quantity,
