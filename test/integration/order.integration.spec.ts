@@ -19,6 +19,7 @@ import { DataSource } from 'typeorm';
 describe('Order Integration', () => {
   let controller: OrderController;
   let cancelOrderUseCase: CancelOrderUseCase;
+  let setOrderPaymentTypeUseCase: SetOrderPaymentTypeUseCase;
   let mockTransactionManager: {
     save: jest.Mock;
     find: jest.Mock;
@@ -85,6 +86,7 @@ describe('Order Integration', () => {
 
     controller = module.get<OrderController>(OrderController);
     cancelOrderUseCase = module.get<CancelOrderUseCase>(CancelOrderUseCase);
+    setOrderPaymentTypeUseCase = module.get<SetOrderPaymentTypeUseCase>(SetOrderPaymentTypeUseCase);
 
     jest.clearAllMocks();
   });
@@ -295,6 +297,28 @@ describe('Order Integration', () => {
       expect(executeSpy).toHaveBeenCalledWith({
         orderId,
         correlationId: 'corr-api-cancel',
+      });
+    });
+  });
+
+  describe('PATCH /orders/:id/payment-type - Set payment type via API flow', () => {
+    it('should pass payment type and correlation id to use case', async () => {
+      const orderId = 'order-uuid';
+      const paymentTypeId = 'payment-uuid';
+      const executeSpy = jest.spyOn(setOrderPaymentTypeUseCase, 'execute').mockResolvedValue({
+        id: orderId,
+        status: 'draft',
+        totalAmount: 0,
+        paymentTypeId,
+        updatedAt: new Date('2024-01-15'),
+      });
+
+      await controller.setPaymentType(orderId, { paymentTypeId }, 'corr-api-payment');
+
+      expect(executeSpy).toHaveBeenCalledWith({
+        orderId,
+        paymentTypeId,
+        correlationId: 'corr-api-payment',
       });
     });
   });
