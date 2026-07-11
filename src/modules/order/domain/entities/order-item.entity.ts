@@ -26,7 +26,7 @@ export class OrderItem extends DomainEntity {
   @Column({ name: 'order_id', type: 'uuid' })
   private _orderId: string | undefined;
 
-  @ManyToOne(() => OrderAggregate, (order) => order.items)
+  @ManyToOne(() => OrderAggregate, (order) => order['_items'])
   @JoinColumn({ name: 'order_id' })
   private _order: OrderAggregate | undefined;
 

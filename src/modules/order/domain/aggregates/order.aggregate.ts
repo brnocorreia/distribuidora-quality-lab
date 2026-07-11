@@ -34,7 +34,7 @@ export class OrderAggregate extends AggregateRoot {
   @Column({ name: 'payment_type_id', type: 'uuid', nullable: true })
   private _paymentTypeId: string | null;
 
-  @OneToMany(() => OrderItem, (item) => item.order, { eager: true, cascade: true })
+  @OneToMany(() => OrderItem, (item) => item['_order'], { eager: true, cascade: true })
   private _items: OrderItem[];
 
   @CreateDateColumn({ name: 'created_at' })
