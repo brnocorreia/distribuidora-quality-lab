@@ -101,32 +101,55 @@ export class OrderController {
   @Post(':id/items')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add item to order' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
   @ApiResponse({ status: 201, description: 'Item added successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 404, description: 'Order or product not found' })
   @ApiResponse({ status: 422, description: 'Order is not in draft state' })
-  async addItem(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: AddItemDto) {
+  async addItem(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: AddItemDto,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to add item to order', {
+      context: 'OrderController',
+      correlationId: cid,
+      orderId: id,
+      productId: dto.productId,
+    });
     return this.addItemToOrderUseCase.execute({
       orderId: id,
       productId: dto.productId,
       quantity: dto.quantity,
       unitPrice: dto.unitPrice,
+      correlationId: cid,
     });
   }
 
   @Delete(':id/items/:itemId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove item from order' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
   @ApiResponse({ status: 200, description: 'Item removed successfully' })
   @ApiResponse({ status: 404, description: 'Order not found' })
   @ApiResponse({ status: 422, description: 'Order is not in draft state or item not found' })
   async removeItem(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
+    @Headers('x-correlation-id') correlationId?: string,
   ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to remove item from order', {
+      context: 'OrderController',
+      correlationId: cid,
+      orderId: id,
+      itemId,
+    });
     return this.removeItemFromOrderUseCase.execute({
       orderId: id,
       itemId,
+      correlationId: cid,
     });
   }
 
@@ -154,6 +177,7 @@ export class OrderController {
 
   @Patch(':id/status')
   @ApiOperation({ summary: 'Transition order status' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
   @ApiResponse({ status: 200, description: 'Status transitioned successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 404, description: 'Order not found' })
@@ -161,19 +185,38 @@ export class OrderController {
   async transitionStatus(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: TransitionStatusDto,
+    @Headers('x-correlation-id') correlationId?: string,
   ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to transition order status', {
+      context: 'OrderController',
+      correlationId: cid,
+      orderId: id,
+      targetStatus: dto.status,
+    });
     return this.transitionOrderStatusUseCase.execute({
       orderId: id,
       targetStatus: dto.status,
+      correlationId: cid,
     });
   }
 
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancel order' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
   @ApiResponse({ status: 200, description: 'Order cancelled successfully' })
   @ApiResponse({ status: 404, description: 'Order not found' })
   @ApiResponse({ status: 422, description: 'Cannot cancel order in current state' })
-  async cancel(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.cancelOrderUseCase.execute({ orderId: id });
+  async cancel(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to cancel order', {
+      context: 'OrderController',
+      correlationId: cid,
+      orderId: id,
+    });
+    return this.cancelOrderUseCase.execute({ orderId: id, correlationId: cid });
   }
 }

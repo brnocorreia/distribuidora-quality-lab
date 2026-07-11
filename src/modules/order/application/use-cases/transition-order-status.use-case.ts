@@ -7,6 +7,7 @@ import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 export interface TransitionOrderStatusInput {
   orderId: string;
   targetStatus: OrderStatusValue;
+  correlationId?: string;
 }
 
 export interface TransitionOrderStatusOutput {
@@ -30,6 +31,7 @@ export class TransitionOrderStatusUseCase {
     if (!order) {
       this.logger.logStructured('warn', 'Order not found', {
         context: 'TransitionOrderStatusUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
       });
       throw new NotFoundException(`Order with id ${input.orderId} not found`);
@@ -43,6 +45,7 @@ export class TransitionOrderStatusUseCase {
 
     this.logger.logStructured('info', 'Order status transitioned', {
       context: 'TransitionOrderStatusUseCase',
+      correlationId: input.correlationId,
       orderId: order.id,
       previousStatus,
       currentStatus: order.status,

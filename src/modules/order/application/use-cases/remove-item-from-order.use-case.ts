@@ -6,6 +6,7 @@ import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 export interface RemoveItemFromOrderInput {
   orderId: string;
   itemId: string;
+  correlationId?: string;
 }
 
 export interface RemoveItemFromOrderOutput {
@@ -29,6 +30,7 @@ export class RemoveItemFromOrderUseCase {
     if (!order) {
       this.logger.logStructured('warn', 'Order not found', {
         context: 'RemoveItemFromOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
       });
       throw new NotFoundException(`Order with id ${input.orderId} not found`);
@@ -40,6 +42,7 @@ export class RemoveItemFromOrderUseCase {
 
     this.logger.logStructured('info', 'Item removed from order', {
       context: 'RemoveItemFromOrderUseCase',
+      correlationId: input.correlationId,
       orderId: input.orderId,
       itemId: input.itemId,
       totalAmount: order.totalAmount,

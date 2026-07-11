@@ -9,6 +9,7 @@ export interface AddItemToOrderInput {
   productId: string;
   quantity: number;
   unitPrice: number;
+  correlationId?: string;
 }
 
 export interface AddItemToOrderOutput {
@@ -36,6 +37,7 @@ export class AddItemToOrderUseCase {
     if (!order) {
       this.logger.logStructured('warn', 'Order not found', {
         context: 'AddItemToOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
       });
       throw new NotFoundException(`Order with id ${input.orderId} not found`);
@@ -46,6 +48,7 @@ export class AddItemToOrderUseCase {
     if (!product) {
       this.logger.logStructured('warn', 'Product not found', {
         context: 'AddItemToOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
         productId: input.productId,
       });
@@ -55,6 +58,7 @@ export class AddItemToOrderUseCase {
     if (product.available === false) {
       this.logger.logStructured('warn', 'Product is unavailable', {
         context: 'AddItemToOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
         productId: input.productId,
       });
@@ -70,6 +74,7 @@ export class AddItemToOrderUseCase {
     if (inputPriceInCents !== productPriceInCents) {
       this.logger.logStructured('warn', 'Unit price does not match product price', {
         context: 'AddItemToOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
         productId: input.productId,
       });
@@ -86,6 +91,7 @@ export class AddItemToOrderUseCase {
 
     this.logger.logStructured('info', 'Item added to order', {
       context: 'AddItemToOrderUseCase',
+      correlationId: input.correlationId,
       orderId: input.orderId,
       productId: item.productId,
       quantity: item.quantity,

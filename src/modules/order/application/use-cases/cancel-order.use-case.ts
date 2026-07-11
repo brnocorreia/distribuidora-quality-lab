@@ -8,6 +8,7 @@ import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 
 export interface CancelOrderInput {
   orderId: string;
+  correlationId?: string;
 }
 
 export interface CancelOrderOutput {
@@ -33,6 +34,7 @@ export class CancelOrderUseCase {
     if (!order) {
       this.logger.logStructured('warn', 'Order not found', {
         context: 'CancelOrderUseCase',
+        correlationId: input.correlationId,
         orderId: input.orderId,
       });
       throw new NotFoundException(`Order with id ${input.orderId} not found`);
@@ -51,6 +53,7 @@ export class CancelOrderUseCase {
             productId: item.productId,
             type: 'entry',
             quantity: item.quantity,
+            reason: `Order ${input.orderId} cancellation`,
           });
           await manager.save(InventoryMovement, movement);
         }
@@ -60,6 +63,7 @@ export class CancelOrderUseCase {
 
     this.logger.logStructured('info', 'Order cancelled', {
       context: 'CancelOrderUseCase',
+      correlationId: input.correlationId,
       orderId: order.id,
       previousStatus,
       currentStatus: order.status,
