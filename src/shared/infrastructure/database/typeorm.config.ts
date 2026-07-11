@@ -18,6 +18,7 @@ export function buildTypeOrmOptions(params: TypeOrmConfigParams): DataSourceOpti
     entities: [
       __dirname + '/../../../**/*.aggregate{.ts,.js}',
       __dirname + '/../../../**/*.entity{.ts,.js}',
+      __dirname + '/../../../**/*.vo{.ts,.js}',
     ],
     logging: nodeEnv === 'development' ? ['error', 'migration'] : ['error'],
   };
