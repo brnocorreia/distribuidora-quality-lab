@@ -35,7 +35,7 @@ export class PaymentTypeEntity extends DomainEntity {
   @Column({ name: 'active', default: true })
   private _active: boolean;
 
-  @OneToMany(() => AcceptanceRule, (rule) => rule.paymentType, {
+  @OneToMany(() => AcceptanceRule, (rule) => rule['_paymentType'], {
     cascade: true,
     eager: true,
   })

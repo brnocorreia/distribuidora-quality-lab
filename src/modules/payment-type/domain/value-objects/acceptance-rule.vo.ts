@@ -7,6 +7,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { ValidationException } from '@shared/domain/exceptions';
+import { PaymentTypeEntity } from '../entities/payment-type.entity';
 
 @Entity('acceptance_rules')
 export class AcceptanceRule {
@@ -22,9 +23,9 @@ export class AcceptanceRule {
   @Column('decimal', { precision: 12, scale: 2, name: 'max_value' })
   private _maxValue: number;
 
-  @ManyToOne('PaymentTypeEntity', 'rules')
+  @ManyToOne(() => PaymentTypeEntity, (paymentType) => paymentType['_rules'])
   @JoinColumn({ name: 'payment_type_id' })
-  private _paymentType: unknown;
+  private _paymentType: PaymentTypeEntity;
 
   @CreateDateColumn({ name: 'created_at' })
   private _createdAt: Date;
@@ -41,7 +42,7 @@ export class AcceptanceRule {
     return Number(this._maxValue);
   }
 
-  get paymentType(): unknown {
+  get paymentType(): PaymentTypeEntity {
     return this._paymentType;
   }
 
