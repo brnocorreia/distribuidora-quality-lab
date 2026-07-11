@@ -1,11 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { InventoryMovement } from '../../domain/entities/inventory-movement.entity';
+import { InventoryService } from '../../domain/services/inventory.service';
 import {
   InventoryRepository,
   INVENTORY_REPOSITORY,
 } from '../../domain/repositories/inventory.repository';
 import { ProductRepository } from '../../../product/domain/repositories/product.repository';
-import { NotFoundException } from '@shared/domain/exceptions';
 
 export interface RegisterEntryInput {
   productId: string;
@@ -22,27 +21,25 @@ export interface RegisterEntryOutput {
 
 @Injectable()
 export class RegisterEntryUseCase {
+  private readonly inventoryService: InventoryService;
+
   constructor(
     @Inject(INVENTORY_REPOSITORY)
-    private readonly inventoryRepository: InventoryRepository,
+    inventoryRepositoryOrService?: InventoryRepository | InventoryService,
     @Inject('ProductRepository')
-    private readonly productRepository: ProductRepository,
-  ) {}
+    productRepository?: ProductRepository,
+  ) {
+    this.inventoryService =
+      inventoryRepositoryOrService instanceof InventoryService
+        ? inventoryRepositoryOrService
+        : new InventoryService(
+            inventoryRepositoryOrService as InventoryRepository,
+            productRepository as ProductRepository,
+          );
+  }
 
   async execute(input: RegisterEntryInput): Promise<RegisterEntryOutput> {
-    const product = await this.productRepository.findById(input.productId);
-
-    if (!product) {
-      throw new NotFoundException(`Product with id ${input.productId} not found`);
-    }
-
-    const movement = InventoryMovement.create({
-      productId: input.productId,
-      type: 'entry',
-      quantity: input.quantity,
-    });
-
-    const saved = await this.inventoryRepository.save(movement);
+    const saved = await this.inventoryService.registerEntry(input);
 
     return {
       id: saved.id,
