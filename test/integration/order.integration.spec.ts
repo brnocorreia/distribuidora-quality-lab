@@ -7,6 +7,7 @@ import { ConfirmOrderUseCase } from '@modules/order/application/use-cases/confir
 import { TransitionOrderStatusUseCase } from '@modules/order/application/use-cases/transition-order-status.use-case';
 import { CancelOrderUseCase } from '@modules/order/application/use-cases/cancel-order.use-case';
 import { SetOrderPaymentTypeUseCase } from '@modules/order/application/use-cases/set-order-payment-type.use-case';
+import { UpdateOrderItemQuantityUseCase } from '@modules/order/application/use-cases/update-order-item-quantity.use-case';
 import { ORDER_REPOSITORY } from '@modules/order/domain/repositories/order.repository';
 import { CUSTOMER_REPOSITORY } from '@modules/customer/domain/repositories/customer.repository';
 import { PAYMENT_TYPE_REPOSITORY } from '@modules/payment-type/domain/repositories/payment-type.repository';
@@ -74,6 +75,7 @@ describe('Order Integration', () => {
         TransitionOrderStatusUseCase,
         CancelOrderUseCase,
         SetOrderPaymentTypeUseCase,
+        UpdateOrderItemQuantityUseCase,
         { provide: ORDER_REPOSITORY, useValue: mockOrderRepository },
         { provide: CUSTOMER_REPOSITORY, useValue: mockCustomerRepository },
         { provide: PAYMENT_TYPE_REPOSITORY, useValue: mockPaymentTypeRepository },

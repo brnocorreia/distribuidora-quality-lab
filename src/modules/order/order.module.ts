@@ -11,6 +11,7 @@ import { ConfirmOrderUseCase } from './application/use-cases/confirm-order.use-c
 import { TransitionOrderStatusUseCase } from './application/use-cases/transition-order-status.use-case';
 import { CancelOrderUseCase } from './application/use-cases/cancel-order.use-case';
 import { SetOrderPaymentTypeUseCase } from './application/use-cases/set-order-payment-type.use-case';
+import { UpdateOrderItemQuantityUseCase } from './application/use-cases/update-order-item-quantity.use-case';
 import { OrderController } from './interface/controllers/order.controller';
 import { ProductModule } from '../product/product.module';
 import { CustomerModule } from '../customer/customer.module';
@@ -36,6 +37,7 @@ import { PaymentTypeModule } from '../payment-type/payment-type.module';
     TransitionOrderStatusUseCase,
     CancelOrderUseCase,
     SetOrderPaymentTypeUseCase,
+    UpdateOrderItemQuantityUseCase,
   ],
   exports: [ORDER_REPOSITORY],
 })

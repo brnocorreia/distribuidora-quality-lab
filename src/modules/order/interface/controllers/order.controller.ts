@@ -23,12 +23,14 @@ import { ConfirmOrderUseCase } from '../../application/use-cases/confirm-order.u
 import { TransitionOrderStatusUseCase } from '../../application/use-cases/transition-order-status.use-case';
 import { CancelOrderUseCase } from '../../application/use-cases/cancel-order.use-case';
 import { SetOrderPaymentTypeUseCase } from '../../application/use-cases/set-order-payment-type.use-case';
+import { UpdateOrderItemQuantityUseCase } from '../../application/use-cases/update-order-item-quantity.use-case';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
 import { NotFoundException } from '@shared/domain/exceptions';
 import { CreateOrderDto } from '../dtos/create-order.dto';
 import { AddItemDto } from '../dtos/add-item.dto';
 import { TransitionStatusDto } from '../dtos/transition-status.dto';
 import { SetOrderPaymentTypeDto } from '../dtos/set-order-payment-type.dto';
+import { UpdateOrderItemQuantityDto } from '../dtos/update-order-item-quantity.dto';
 import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 
 @ApiTags('orders')
@@ -43,6 +45,7 @@ export class OrderController {
     private readonly transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
     private readonly cancelOrderUseCase: CancelOrderUseCase,
     private readonly setOrderPaymentTypeUseCase: SetOrderPaymentTypeUseCase,
+    private readonly updateOrderItemQuantityUseCase: UpdateOrderItemQuantityUseCase,
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
     private readonly logger: LoggerService,
@@ -126,6 +129,35 @@ export class OrderController {
       productId: dto.productId,
       quantity: dto.quantity,
       unitPrice: dto.unitPrice,
+      correlationId: cid,
+    });
+  }
+
+  @Patch(':id/items/:itemId')
+  @ApiOperation({ summary: 'Update order item quantity' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
+  @ApiResponse({ status: 200, description: 'Item quantity updated successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  @ApiResponse({ status: 422, description: 'Order is not in draft state or item not found' })
+  async updateItemQuantity(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('itemId', new ParseUUIDPipe()) itemId: string,
+    @Body() dto: UpdateOrderItemQuantityDto,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to update order item quantity', {
+      context: 'OrderController',
+      correlationId: cid,
+      orderId: id,
+      itemId,
+      quantity: dto.quantity,
+    });
+    return this.updateOrderItemQuantityUseCase.execute({
+      orderId: id,
+      itemId,
+      quantity: dto.quantity,
       correlationId: cid,
     });
   }
