@@ -14,6 +14,7 @@ describe('TransitionOrderStatusUseCase', () => {
   const mockLogger = { logStructured: jest.fn() };
 
   beforeEach(() => {
+    mockLogger.logStructured.mockClear();
     orderRepository = {
       findById: jest.fn(),
       findByCustomerId: jest.fn(),
@@ -38,12 +39,26 @@ describe('TransitionOrderStatusUseCase', () => {
       orderRepository.findById.mockResolvedValue(order);
       orderRepository.save.mockResolvedValue(order);
 
-      const result = await useCase.execute({ orderId, targetStatus: 'in_separation' });
+      const result = await useCase.execute({
+        orderId,
+        targetStatus: 'in_separation',
+        correlationId: 'corr-transition-status',
+      });
 
       expect(result.id).toBe(orderId);
       expect(result.previousStatus).toBe('confirmed');
       expect(result.currentStatus).toBe('in_separation');
       expect(orderRepository.save).toHaveBeenCalledWith(order);
+      expect(mockLogger.logStructured).toHaveBeenCalledWith(
+        'info',
+        'Order status transitioned',
+        expect.objectContaining({
+          correlationId: 'corr-transition-status',
+          orderId,
+          previousStatus: 'confirmed',
+          currentStatus: 'in_separation',
+        }),
+      );
     });
 
     it('when order is in_separation, then transitions to shipped', async () => {

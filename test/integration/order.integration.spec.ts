@@ -16,6 +16,7 @@ import { DataSource } from 'typeorm';
 
 describe('Order Integration', () => {
   let controller: OrderController;
+  let cancelOrderUseCase: CancelOrderUseCase;
   let mockTransactionManager: {
     save: jest.Mock;
     find: jest.Mock;
@@ -70,6 +71,7 @@ describe('Order Integration', () => {
     }).compile();
 
     controller = module.get<OrderController>(OrderController);
+    cancelOrderUseCase = module.get<CancelOrderUseCase>(CancelOrderUseCase);
 
     jest.clearAllMocks();
   });
@@ -263,6 +265,24 @@ describe('Order Integration', () => {
       const savedEntities = mockTransactionManager.save.mock.calls.map(call => call[1] ?? call[0]);
       const entryMovements = savedEntities.filter(e => e.type === 'entry');
       expect(entryMovements).toHaveLength(0);
+    });
+
+    it('should pass correlation id header to cancel use case', async () => {
+      const orderId = 'order-uuid';
+      const executeSpy = jest.spyOn(cancelOrderUseCase, 'execute').mockResolvedValue({
+        id: orderId,
+        previousStatus: 'draft',
+        currentStatus: 'cancelled',
+        stockReverted: false,
+        updatedAt: new Date('2024-01-15'),
+      });
+
+      await controller.cancel(orderId, 'corr-api-cancel');
+
+      expect(executeSpy).toHaveBeenCalledWith({
+        orderId,
+        correlationId: 'corr-api-cancel',
+      });
     });
   });
 });

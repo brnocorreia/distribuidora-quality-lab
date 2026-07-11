@@ -20,6 +20,7 @@ describe('AddItemToOrderUseCase', () => {
   const mockLogger = { logStructured: jest.fn() };
 
   beforeEach(() => {
+    mockLogger.logStructured.mockClear();
     orderRepository = {
       findById: jest.fn(),
       findByCustomerId: jest.fn(),
@@ -58,12 +59,24 @@ describe('AddItemToOrderUseCase', () => {
         productId,
         quantity: 3,
         unitPrice: 25.0,
+        correlationId: 'corr-add-item',
       });
 
       expect(result.productId).toBe(productId);
       expect(result.quantity).toBe(3);
       expect(result.unitPrice).toBe(25.0);
       expect(result.subtotal).toBe(75.0);
+      expect(mockLogger.logStructured).toHaveBeenCalledWith(
+        'info',
+        'Item added to order',
+        expect.objectContaining({
+          correlationId: 'corr-add-item',
+          orderId,
+          productId,
+          quantity: 3,
+          subtotal: 75.0,
+        }),
+      );
     });
 
     it('when unit price does not match product price, then throws BusinessRuleException', async () => {

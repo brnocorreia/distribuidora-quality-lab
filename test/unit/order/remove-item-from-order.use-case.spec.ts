@@ -14,6 +14,7 @@ describe('RemoveItemFromOrderUseCase', () => {
   const mockLogger = { logStructured: jest.fn() };
 
   beforeEach(() => {
+    mockLogger.logStructured.mockClear();
     orderRepository = {
       findById: jest.fn(),
       findByCustomerId: jest.fn(),
@@ -37,13 +38,28 @@ describe('RemoveItemFromOrderUseCase', () => {
       orderRepository.findById.mockResolvedValue(order);
       orderRepository.save.mockResolvedValue(order);
 
-      const result = await useCase.execute({ orderId, itemId: 'item-uuid' });
+      const result = await useCase.execute({
+        orderId,
+        itemId: 'item-uuid',
+        correlationId: 'corr-remove-item',
+      });
 
       expect(result.orderId).toBe(orderId);
       expect(result.removedItemId).toBe('item-uuid');
       expect(result.itemCount).toBe(0);
       expect(result.totalAmount).toBe(0);
       expect(orderRepository.save).toHaveBeenCalledWith(order);
+      expect(mockLogger.logStructured).toHaveBeenCalledWith(
+        'info',
+        'Item removed from order',
+        expect.objectContaining({
+          correlationId: 'corr-remove-item',
+          orderId,
+          itemId: 'item-uuid',
+          totalAmount: 0,
+          itemCount: 0,
+        }),
+      );
     });
 
     it('when order has multiple items, then removes only the specified item and recalculates total', async () => {

@@ -17,6 +17,9 @@ describe('CancelOrderUseCase', () => {
   let mockDataSource: {
     transaction: jest.Mock;
   };
+  let mockLogger: {
+    logStructured: jest.Mock;
+  };
 
   beforeEach(() => {
     orderRepository = {
@@ -32,7 +35,7 @@ describe('CancelOrderUseCase', () => {
       transaction: jest.fn().mockImplementation(async (cb) => cb(mockManager)),
     };
 
-    const mockLogger = { logStructured: jest.fn() };
+    mockLogger = { logStructured: jest.fn() };
 
     useCase = new CancelOrderUseCase(
       orderRepository as any,
@@ -70,7 +73,7 @@ describe('CancelOrderUseCase', () => {
       orderRepository.findById.mockResolvedValue(order);
       orderRepository.save.mockResolvedValue(order);
 
-      const result = await useCase.execute({ orderId });
+      const result = await useCase.execute({ orderId, correlationId: 'corr-cancel-order' });
 
       expect(result.currentStatus).toBe('cancelled');
       expect(result.stockReverted).toBe(true);
@@ -87,6 +90,18 @@ describe('CancelOrderUseCase', () => {
       expect(stockReturn.type).toBe('entry');
       expect(stockReturn.productId).toBe(productId1);
       expect(stockReturn.quantity).toBe(5);
+      expect(stockReturn.reason).toBe(`Order ${orderId} cancellation`);
+      expect(mockLogger.logStructured).toHaveBeenCalledWith(
+        'info',
+        'Order cancelled',
+        expect.objectContaining({
+          correlationId: 'corr-cancel-order',
+          orderId,
+          previousStatus: 'confirmed',
+          currentStatus: 'cancelled',
+          stockReverted: true,
+        }),
+      );
     });
 
     it('when order is in_separation, then cancels and reverts stock', async () => {
