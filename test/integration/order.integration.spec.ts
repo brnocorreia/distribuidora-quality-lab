@@ -21,6 +21,7 @@ describe('Order Integration', () => {
   let controller: OrderController;
   let cancelOrderUseCase: CancelOrderUseCase;
   let setOrderPaymentTypeUseCase: SetOrderPaymentTypeUseCase;
+  let updateOrderItemQuantityUseCase: UpdateOrderItemQuantityUseCase;
   let mockTransactionManager: {
     save: jest.Mock;
     find: jest.Mock;
@@ -89,6 +90,9 @@ describe('Order Integration', () => {
     controller = module.get<OrderController>(OrderController);
     cancelOrderUseCase = module.get<CancelOrderUseCase>(CancelOrderUseCase);
     setOrderPaymentTypeUseCase = module.get<SetOrderPaymentTypeUseCase>(SetOrderPaymentTypeUseCase);
+    updateOrderItemQuantityUseCase = module.get<UpdateOrderItemQuantityUseCase>(
+      UpdateOrderItemQuantityUseCase,
+    );
 
     jest.clearAllMocks();
   });
@@ -321,6 +325,30 @@ describe('Order Integration', () => {
         orderId,
         paymentTypeId,
         correlationId: 'corr-api-payment',
+      });
+    });
+  });
+
+  describe('PATCH /orders/:id/items/:itemId - Update item quantity via API flow', () => {
+    it('should pass item quantity and correlation id to use case', async () => {
+      const orderId = 'order-uuid';
+      const itemId = 'item-uuid';
+      const executeSpy = jest.spyOn(updateOrderItemQuantityUseCase, 'execute').mockResolvedValue({
+        orderId,
+        itemId,
+        quantity: 4,
+        subtotal: 50,
+        totalAmount: 50,
+        itemCount: 1,
+      });
+
+      await controller.updateItemQuantity(orderId, itemId, { quantity: 4 }, 'corr-api-quantity');
+
+      expect(executeSpy).toHaveBeenCalledWith({
+        orderId,
+        itemId,
+        quantity: 4,
+        correlationId: 'corr-api-quantity',
       });
     });
   });
