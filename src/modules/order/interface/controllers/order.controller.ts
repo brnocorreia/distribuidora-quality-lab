@@ -22,11 +22,13 @@ import { RemoveItemFromOrderUseCase } from '../../application/use-cases/remove-i
 import { ConfirmOrderUseCase } from '../../application/use-cases/confirm-order.use-case';
 import { TransitionOrderStatusUseCase } from '../../application/use-cases/transition-order-status.use-case';
 import { CancelOrderUseCase } from '../../application/use-cases/cancel-order.use-case';
+import { SetOrderPaymentTypeUseCase } from '../../application/use-cases/set-order-payment-type.use-case';
 import { OrderRepository, ORDER_REPOSITORY } from '../../domain/repositories/order.repository';
 import { NotFoundException } from '@shared/domain/exceptions';
 import { CreateOrderDto } from '../dtos/create-order.dto';
 import { AddItemDto } from '../dtos/add-item.dto';
 import { TransitionStatusDto } from '../dtos/transition-status.dto';
+import { SetOrderPaymentTypeDto } from '../dtos/set-order-payment-type.dto';
 import { LoggerService } from '@shared/infrastructure/logging/logger.service';
 
 @ApiTags('orders')
@@ -40,6 +42,7 @@ export class OrderController {
     private readonly confirmOrderUseCase: ConfirmOrderUseCase,
     private readonly transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
     private readonly cancelOrderUseCase: CancelOrderUseCase,
+    private readonly setOrderPaymentTypeUseCase: SetOrderPaymentTypeUseCase,
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
     private readonly logger: LoggerService,
@@ -197,6 +200,32 @@ export class OrderController {
     return this.transitionOrderStatusUseCase.execute({
       orderId: id,
       targetStatus: dto.status,
+      correlationId: cid,
+    });
+  }
+
+  @Patch(':id/payment-type')
+  @ApiOperation({ summary: 'Set order payment type' })
+  @ApiHeader({ name: 'x-correlation-id', required: false, description: 'Trace request' })
+  @ApiResponse({ status: 200, description: 'Payment type set successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @ApiResponse({ status: 404, description: 'Order or payment type not found' })
+  @ApiResponse({ status: 422, description: 'Order is not in draft state or payment is inactive' })
+  async setPaymentType(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: SetOrderPaymentTypeDto,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const cid = correlationId || randomUUID();
+    this.logger.logStructured('info', 'Received request to set order payment type', {
+      context: 'OrderController',
+      correlationId: cid,
+      orderId: id,
+      paymentTypeId: dto.paymentTypeId,
+    });
+    return this.setOrderPaymentTypeUseCase.execute({
+      orderId: id,
+      paymentTypeId: dto.paymentTypeId,
       correlationId: cid,
     });
   }

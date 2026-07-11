@@ -6,8 +6,10 @@ import { RemoveItemFromOrderUseCase } from '@modules/order/application/use-cases
 import { ConfirmOrderUseCase } from '@modules/order/application/use-cases/confirm-order.use-case';
 import { TransitionOrderStatusUseCase } from '@modules/order/application/use-cases/transition-order-status.use-case';
 import { CancelOrderUseCase } from '@modules/order/application/use-cases/cancel-order.use-case';
+import { SetOrderPaymentTypeUseCase } from '@modules/order/application/use-cases/set-order-payment-type.use-case';
 import { ORDER_REPOSITORY } from '@modules/order/domain/repositories/order.repository';
 import { CUSTOMER_REPOSITORY } from '@modules/customer/domain/repositories/customer.repository';
+import { PAYMENT_TYPE_REPOSITORY } from '@modules/payment-type/domain/repositories/payment-type.repository';
 import { OrderAggregate } from '@modules/order/domain/aggregates/order.aggregate';
 import { InventoryMovement } from '@modules/inventory/domain/entities/inventory-movement.entity';
 import { ValidatePaymentForOrderUseCase } from '@modules/payment-type/application/use-cases/validate-payment-for-order.use-case';
@@ -41,6 +43,15 @@ describe('Order Integration', () => {
     execute: jest.fn().mockResolvedValue({ valid: true }),
   };
 
+  const mockPaymentTypeRepository = {
+    findById: jest.fn(),
+    findByName: jest.fn(),
+    findAll: jest.fn(),
+    findAllActive: jest.fn(),
+    save: jest.fn(),
+    delete: jest.fn(),
+  };
+
   const mockDataSource = {
     transaction: jest.fn().mockImplementation(async (cb) => {
       mockTransactionManager = {
@@ -61,8 +72,10 @@ describe('Order Integration', () => {
         ConfirmOrderUseCase,
         TransitionOrderStatusUseCase,
         CancelOrderUseCase,
+        SetOrderPaymentTypeUseCase,
         { provide: ORDER_REPOSITORY, useValue: mockOrderRepository },
         { provide: CUSTOMER_REPOSITORY, useValue: mockCustomerRepository },
+        { provide: PAYMENT_TYPE_REPOSITORY, useValue: mockPaymentTypeRepository },
         { provide: 'ProductRepository', useValue: mockProductRepository },
         { provide: ValidatePaymentForOrderUseCase, useValue: mockValidatePaymentUseCase },
         { provide: DataSource, useValue: mockDataSource },
