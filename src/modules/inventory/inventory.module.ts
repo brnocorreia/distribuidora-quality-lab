@@ -9,6 +9,7 @@ import { GetBalanceUseCase } from './application/use-cases/get-balance.use-case'
 import { GetMovementHistoryUseCase } from './application/use-cases/get-movement-history.use-case';
 import { InventoryController } from './interface/controllers/inventory.controller';
 import { ProductModule } from '../product/product.module';
+import { InventoryService } from './domain/services/inventory.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([InventoryMovement]), ProductModule],
@@ -18,6 +19,7 @@ import { ProductModule } from '../product/product.module';
       provide: INVENTORY_REPOSITORY,
       useClass: TypeOrmInventoryRepository,
     },
+    InventoryService,
     RegisterEntryUseCase,
     RegisterWithdrawalUseCase,
     GetBalanceUseCase,
