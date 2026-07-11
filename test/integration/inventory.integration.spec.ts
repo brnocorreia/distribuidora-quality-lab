@@ -5,6 +5,7 @@ import { RegisterWithdrawalUseCase } from '@modules/inventory/application/use-ca
 import { GetBalanceUseCase } from '@modules/inventory/application/use-cases/get-balance.use-case';
 import { GetMovementHistoryUseCase } from '@modules/inventory/application/use-cases/get-movement-history.use-case';
 import { INVENTORY_REPOSITORY } from '@modules/inventory/domain/repositories/inventory.repository';
+import { InventoryService } from '@modules/inventory/domain/services/inventory.service';
 
 describe('Inventory Integration', () => {
   let controller: InventoryController;
@@ -24,6 +25,7 @@ describe('Inventory Integration', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InventoryController],
       providers: [
+        InventoryService,
         RegisterEntryUseCase,
         RegisterWithdrawalUseCase,
         GetBalanceUseCase,

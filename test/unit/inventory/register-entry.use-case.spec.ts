@@ -1,9 +1,11 @@
 import { RegisterEntryUseCase } from '@modules/inventory/application/use-cases/register-entry.use-case';
+import { InventoryService } from '@modules/inventory/domain/services/inventory.service';
 import { NotFoundException } from '@shared/domain/exceptions';
 import { ValidationException } from '@shared/domain/exceptions';
 
 describe('RegisterEntryUseCase', () => {
   let useCase: RegisterEntryUseCase;
+  let inventoryService: InventoryService;
   let inventoryRepository: {
     findMovementsByProductId: jest.Mock;
     save: jest.Mock;
@@ -29,10 +31,12 @@ describe('RegisterEntryUseCase', () => {
       findAll: jest.fn(),
     };
 
-    useCase = new RegisterEntryUseCase(
+    inventoryService = new InventoryService(
       inventoryRepository as any,
       productRepository as any,
     );
+
+    useCase = new RegisterEntryUseCase(inventoryService);
   });
 
   describe('execute', () => {

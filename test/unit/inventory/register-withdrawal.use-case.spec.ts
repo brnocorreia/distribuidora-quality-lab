@@ -1,8 +1,10 @@
 import { RegisterWithdrawalUseCase } from '@modules/inventory/application/use-cases/register-withdrawal.use-case';
+import { InventoryService } from '@modules/inventory/domain/services/inventory.service';
 import { NotFoundException, BusinessRuleException } from '@shared/domain/exceptions';
 
 describe('RegisterWithdrawalUseCase', () => {
   let useCase: RegisterWithdrawalUseCase;
+  let inventoryService: InventoryService;
   let inventoryRepository: {
     findMovementsByProductId: jest.Mock;
     save: jest.Mock;
@@ -28,10 +30,12 @@ describe('RegisterWithdrawalUseCase', () => {
       findAll: jest.fn(),
     };
 
-    useCase = new RegisterWithdrawalUseCase(
+    inventoryService = new InventoryService(
       inventoryRepository as any,
       productRepository as any,
     );
+
+    useCase = new RegisterWithdrawalUseCase(inventoryService);
   });
 
   const productId = '550e8400-e29b-41d4-a716-446655440000';
